@@ -1,3 +1,5 @@
 /alan_controllers/alan_wheels/build/
 /alan_ws/build/
 /alan_ws/devel/
+
+/alan_ws/.catkin_workspace
