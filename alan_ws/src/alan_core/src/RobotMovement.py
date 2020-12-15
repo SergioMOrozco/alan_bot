@@ -1,6 +1,7 @@
-#! /usr/bin/python3
+#! /home/sorozco/computer_vision/bin/python3
 import rospy
 from std_msgs.msg import Float32
+from pynput.keyboard import Key, Listener
 
 SPEED = 1
 class RobotMovement:
@@ -28,23 +29,19 @@ class RobotMovement:
         self.right_wheel_pub.publish(Float32(0))
         self.left_wheel_pub.publish(Float32(0))
 
+def on_press(key):
+    print (key + " Pressed")
+def on_release(key):
+    print (key + " Pressed")
+
 
 if __name__ == "__main__":
     rospy.init_node('robot_movement_node')
     movement = RobotMovement()
 
-    while True:
-        text = input('Enter a command: ')
-
-        if text == 'w':
-            movement.move_forward()
-        if text == 'a':
-            movement.move_left()
-        if text == 's':
-            movement.move_backward()
-        if text == 'd':
-            movement.move_right()
-        if text == 'q':
-            movement.stop()
-            break
+    # Collect events until released
+    with Listener(
+        on_press=on_press,
+        on_release=on_release) as listener:
+        listener.join()
 
