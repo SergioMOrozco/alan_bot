@@ -1,3 +1,4 @@
+#! /home/sorozco/computer_vision/bin/python3
 import numpy as np
 import cv2
 cap = cv2.VideoCapture(0)
@@ -5,7 +6,8 @@ cap = cv2.VideoCapture(0)
 while(True):
     # Capture frame-by-frame
     ret, frame = cap.read()
-    print(frame.size)
+
+    frame = cv2.flip(frame,0)
 
     # Display the resulting frame
     cv2.imshow('frame',frame)
