@@ -8,6 +8,7 @@ from enum import Enum
 SPEED = 1
 
 class MovementType(Enum):
+    Undefined = 0
     Forward = 1
     Backward = 2
     Left = 3
@@ -18,7 +19,7 @@ class RobotMovement:
     def __init__(self):
         self.right_wheel_pub = rospy.Publisher('wheel_power_left'        ,Float32,queue_size=1)
         self.left_wheel_pub = rospy.Publisher('wheel_power_right'        ,Float32,queue_size=1)
-        self._movement_type = MovementType.Stopped
+        self._movement_type = MovementType.Undefined
 
     def move_forward(self):
         if (self._movement_type != MovementType.Forward):
@@ -49,7 +50,8 @@ class RobotMovement:
             self._movement_type = MovementType.Right
 
     def stop(self):
-        if (not self._movement_type == MovementType.Stopped):
+        if (self._movement_type != MovementType.Stopped):
+            rospy.loginfo("Stopping")
             self.right_wheel_pub.publish(Float32(0))
             self.left_wheel_pub.publish(Float32(0))
             self._movement_type = MovementType.Stopped
