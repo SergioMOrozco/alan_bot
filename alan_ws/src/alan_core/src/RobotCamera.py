@@ -22,7 +22,8 @@ fps = FPS().start()
 while(True):
     # Capture frame-by-frame, resize, and flip
     frame = vs.read()
-    frame = imutils.resize(frame,width=400)
+
+    # flip to correct rotation
     frame = cv2.flip(frame,0)
     frame = cv2.flip(frame,1)
 
