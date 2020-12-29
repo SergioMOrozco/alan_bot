@@ -1,3 +1,5 @@
+#! /home/sorozco/computer_vision/bin/python3
+
 ## pi camera allows access to the RAspberry Pi camera module
 from picamera.array import PiRGBArray
 from picamera import PiCamera
