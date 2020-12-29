@@ -1,4 +1,4 @@
-#! /home/sorozco/computer_vision/bin python3
+#! /home/sorozco/computer_vision/bin/python3
 
 from alan_core.pi_video_stream import PiVideoStream
 import rosunit
