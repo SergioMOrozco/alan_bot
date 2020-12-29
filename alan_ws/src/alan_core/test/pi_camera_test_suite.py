@@ -1,6 +1,6 @@
 #! /home/sorozco/computer_vision/bin python3
 
-from alan_core.PiVideoStream import PiVideoStream
+from alan_core.pi_video_stream import PiVideoStream
 import rosunit
 import unittest
 import sys
