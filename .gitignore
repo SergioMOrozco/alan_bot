@@ -3,3 +3,6 @@
 /alan_ws/devel/
 
 /alan_ws/.catkin_workspace
+
+*.pyc
+!**/__pycache__/

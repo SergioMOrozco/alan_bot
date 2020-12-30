@@ -1,6 +1,6 @@
 #! /home/sorozco/computer_vision/bin/python3
 from __future__ import print_function
-from PiVideoStream import PiVideoStream
+from pi_video_stream import PiVideoStream
 from imutils.video import FPS
 from picamera.array import PiRGBArray
 from picamera import PiCamera
