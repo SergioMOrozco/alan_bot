@@ -9,37 +9,54 @@ ros::NodeHandle nh;
 #define LED_BUILTIN 13
 #endif
 
-#define M_RIGHT_PWM 6
-#define M_RIGHT_FR 7
-#define M_LEFT_PWM 5
-#define M_LEFT_FR 4
+#define M_LEFT_PWM 6
+#define M_LEFT_FR 7
+#define M_RIGHT_PWM 5
+#define M_RIGHT_FR 4
 
 void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsigned int fr_pin) 
 {
+	// stop motor briefly
+	//digitalWrite(fr_pin, LOW);
+	//digitalWrite(pwm_pin, LOW);
+	//delay(20);
 	
 	//factor must be between -1 and 1
 	float factor = max(min(wheel_power.data,1.0f),-1.0f);
 
-	if (factor >= 0)
+	if (factor > 0)
 	{
+		nh.loginfo("Factor >= 0");
+		
 		digitalWrite(fr_pin, LOW);
-		analogWrite(pwm_pin, (unsigned int)(255 * factor));
+		digitalWrite(pwm_pin, HIGH);
+		//analogWrite(pwm_pin, (unsigned int)(255 * factor));
 	}
-	else 
+	else if (factor < 0)
 	{
+		nh.loginfo("Factor <= 0");
 		digitalWrite(fr_pin, HIGH);
-		analogWrite(pwm_pin, (unsigned int)(255 * (1.0f + factor)));
+		digitalWrite(pwm_pin, LOW);
+		//analogWrite(pwm_pin, (unsigned int)(255 * (1.0f + factor)));
+	}
+	else {
+		digitalWrite(fr_pin, HIGH);
+		digitalWrite(pwm_pin, HIGH);
 	}
 }
 
 void rightWheelCb( const std_msgs::Float32 &wheel_power)
 {
-	nh.loginfo("Wheel Power - Right");
+	String message = "Wheel Power - Right" + String(wheel_power.data);
+	char *message_convert = message.c_str();
+	nh.loginfo(message_convert);
 	turnWheel(wheel_power,M_RIGHT_PWM,M_RIGHT_FR);
 }
 void leftWheelCb( const std_msgs::Float32 &wheel_power)
 {
-	nh.loginfo("Wheel Power - Left");
+	String message = "Wheel Power - Left" + String(wheel_power.data);
+	char *message_convert = message.c_str();
+	nh.loginfo(message_convert);
 	turnWheel(wheel_power,M_LEFT_PWM,M_LEFT_FR);
 }
 
@@ -68,7 +85,6 @@ void setup()
 }
 
 void loop() {
-	nh.loginfo("Log Me");
 	nh.spinOnce();
-	delay(1000);
+	//delay(1000);
 }
