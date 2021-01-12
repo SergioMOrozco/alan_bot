@@ -9,18 +9,23 @@ ros::NodeHandle nh;
 #define LED_BUILTIN 13
 #endif
 
+
+// wheels
 #define M_LEFT_PWM 6
 #define M_LEFT_FR 7
 #define M_RIGHT_PWM 5
 #define M_RIGHT_FR 4
 
+//encoders
+#define RIGHT_ENCODER 2
+#define LEFT_ENCODER 3
+
+unsigned long left_tick = 0;
+unsigned long right_tick = 0;
+
+
 void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsigned int fr_pin) 
 {
-	// stop motor briefly
-	//digitalWrite(fr_pin, LOW);
-	//digitalWrite(pwm_pin, LOW);
-	//delay(20);
-	
 	//factor must be between -1 and 1
 	float factor = max(min(wheel_power.data,1.0f),-1.0f);
 
@@ -68,6 +73,20 @@ void setup()
   	pinMode(LED_BUILTIN, OUTPUT);
   	digitalWrite(LED_BUILTIN, HIGH);
 
+
+	// encoders
+	
+	// hall effect sensor is an open drain output. This means that the
+	// sensor will only pull line low, but it won't pull it high. It will just
+	// leave it floating, so we need to pull it up to a voltage
+	pinMode(LEFT_ENCODER,INPUT_PULLUP);
+	pinMode(RIGHT_ENCODER,INPUT_PULLUP);
+
+	attachInterrupt(digitalPinToInterrupt(LEFT_ENCODER),left_encoder,CHANGE);
+	attachInterrupt(digitalPinToInterrupt(RIGHT_ENCODER),right_encoder,CHANGE);
+
+
+	// wheels
   	pinMode(M_LEFT_PWM, OUTPUT);
   	pinMode(M_LEFT_FR, OUTPUT);
   	pinMode(M_RIGHT_PWM, OUTPUT);
@@ -86,5 +105,22 @@ void setup()
 
 void loop() {
 	nh.spinOnce();
-	//delay(1000);
+
+	String right_message = "Right Tick: " + String(right_tick);
+	char *right_message_convert = right_message.c_str();
+	String left_message = "Left Tick: " + String(left_tick);
+	char *left_message_convert = left_message.c_str();
+
+	nh.loginfo(right_message_convert);
+	nh.loginfo(left_message_convert);
+
+
+
+}
+
+void left_encoder() {
+	left_tick += 1;
+}
+void right_encoder() {
+	right_tick += 1;
 }
