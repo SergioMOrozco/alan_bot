@@ -41,15 +41,13 @@ void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsig
 		nh.loginfo("Factor >= 0");
 		
 		digitalWrite(fr_pin, LOW);
-		digitalWrite(pwm_pin, HIGH);
-		//analogWrite(pwm_pin, (unsigned int)(255 * factor));
+		analogWrite(pwm_pin, (unsigned int)(255 * factor));
 	}
 	else if (factor < 0)
 	{
 		nh.loginfo("Factor <= 0");
 		digitalWrite(fr_pin, HIGH);
-		digitalWrite(pwm_pin, LOW);
-		//analogWrite(pwm_pin, (unsigned int)(255 * (1.0f + factor)));
+		analogWrite(pwm_pin, (unsigned int)(255 * (1.0f + factor)));
 	}
 	else {
 		digitalWrite(fr_pin, HIGH);
