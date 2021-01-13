@@ -1,9 +1,16 @@
 #include <ros.h>
 #include "Arduino.h"
-
+#include <PIDController.h>
 #include <std_msgs/Float32.h>
 
 ros::NodeHandle nh;
+ros::Subscriber<std_msgs::Float32> sub_right("wheel_power_right", &rightWheelCb);
+ros::Subscriber<std_msgs::Float32> sub_left("wheel_power_left", &leftWheelCb);
+
+// volatile means to store variable in RAM, not storage register.
+// use volatile whenever its calue can be changed by somewhere else in the code in which it appears (such as interrupts)
+volatile long int encoder_pos = 0;
+PIDController pos_pid; 
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 13
@@ -65,8 +72,6 @@ void leftWheelCb( const std_msgs::Float32 &wheel_power)
 	turnWheel(wheel_power,M_LEFT_PWM,M_LEFT_FR);
 }
 
-ros::Subscriber<std_msgs::Float32> sub_right("wheel_power_right", &rightWheelCb);
-ros::Subscriber<std_msgs::Float32> sub_left("wheel_power_left", &leftWheelCb);
 void setup() 
 {
   	// initialize LED digital pin as an output.
@@ -82,8 +87,8 @@ void setup()
 	pinMode(LEFT_ENCODER,INPUT_PULLUP);
 	pinMode(RIGHT_ENCODER,INPUT_PULLUP);
 
-	attachInterrupt(digitalPinToInterrupt(LEFT_ENCODER),left_encoder,CHANGE);
-	attachInterrupt(digitalPinToInterrupt(RIGHT_ENCODER),right_encoder,CHANGE);
+	attachInterrupt(digitalPinToInterrupt(LEFT_ENCODER),left_encoder,RISING);
+	attachInterrupt(digitalPinToInterrupt(RIGHT_ENCODER),right_encoder,RISING);
 
 
 	// wheels
@@ -101,21 +106,15 @@ void setup()
   	nh.initNode();
   	nh.subscribe(sub_right);
   	nh.subscribe(sub_left);
+
+	//PID control
+	pos_pid.begin();
+	pos_pid.tune(15,0,2000);
+	pos_pid.limit(0,255);
 }
 
 void loop() {
 	nh.spinOnce();
-
-	String right_message = "Right Tick: " + String(right_tick);
-	char *right_message_convert = right_message.c_str();
-	String left_message = "Left Tick: " + String(left_tick);
-	char *left_message_convert = left_message.c_str();
-
-	nh.loginfo(right_message_convert);
-	nh.loginfo(left_message_convert);
-
-
-
 }
 
 void left_encoder() {
