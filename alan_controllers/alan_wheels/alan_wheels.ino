@@ -12,11 +12,11 @@ unsigned long right_tick = 0;
 
 
 // PID variables
-double Kp= 0, Ki = 10 , Kd = 0;
-double CalculatedLeftPwm, CorrectedLeftPwm, DesiredLeftPwm;
-double CalculatedRightPwm, CorrectedRightPwm, DesiredRightPwm;
-PID leftWheelPidController (&CalculatedLeftPwm, &CorrectedLeftPwm, &DesiredLeftPwm, Kp, Ki, Kd, DIRECT); 
-PID rightWheelPidController(&CalculatedRightPwm, &CorrectedRightPwm, &DesiredRightPwm, Kp, Ki, Kd, DIRECT); 
+double Kp= 10, Ki = 100 , Kd = 1000;
+double ActualLeftPwm = 0, CorrectedLeftPwm = 0, DesiredLeftPwm = 0;
+double ActualRightPwm = 0, CorrectedRightPwm = 0, DesiredRightPwm = 0;
+PID leftWheelPidController (&ActualLeftPwm, &CorrectedLeftPwm, &DesiredLeftPwm, Kp, Ki, Kd, DIRECT); 
+PID rightWheelPidController(&ActualRightPwm, &CorrectedRightPwm, &DesiredRightPwm, Kp, Ki, Kd, DIRECT); 
 
 #ifndef LED_BUILTIN
 #define LED_BUILTIN 13
@@ -29,7 +29,7 @@ PID rightWheelPidController(&CalculatedRightPwm, &CorrectedRightPwm, &DesiredRig
 #define RIGHT_PWM 5
 #define RIGHT_FR 4
 
-bool LeftDirectionForward, RightDirectionForward = true;
+bool LeftDirectionForward = true, RightDirectionForward = true;
 
 //encoders
 #define RIGHT_ENCODER 2
@@ -84,17 +84,17 @@ void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsig
 
 void rightWheelCb( const std_msgs::Float32 &wheel_power)
 {
-	//String message = "Wheel Power - Right" + String(wheel_power.data);
-	//char *message_convert = message.c_str();
-	//nh.loginfo(message_convert);
+	String message = "Wheel Power - Right" + String(wheel_power.data);
+	char *message_convert = message.c_str();
+	nh.loginfo(message_convert);
 	turnWheel(wheel_power,RIGHT_PWM,RIGHT_FR);
 	RightDirectionForward = wheel_power.data >= 0;
 }
 void leftWheelCb( const std_msgs::Float32 &wheel_power)
 {
-	//String message = "Wheel Power - Left" + String(wheel_power.data);
-	//char *message_convert = message.c_str();
-	//nh.loginfo(message_convert);
+	String message = "Wheel Power - Left" + String(wheel_power.data);
+	char *message_convert = message.c_str();
+	nh.loginfo(message_convert);
 	turnWheel(wheel_power,LEFT_PWM,LEFT_FR);
 	LeftDirectionForward = wheel_power.data >= 0;
 }
@@ -102,9 +102,15 @@ void leftWheelCb( const std_msgs::Float32 &wheel_power)
 ros::Subscriber<std_msgs::Float32> sub_right("wheel_power_right", &rightWheelCb);
 ros::Subscriber<std_msgs::Float32> sub_left("wheel_power_left", &leftWheelCb);
 
+std_msgs::Float32 actual_right_pwm;
+std_msgs::Float32 desired_right_pwm;
+
+ros::Publisher pub_actual_right_pwm("actual_right_pwm", &actual_right_pwm);
+ros::Publisher pub_desired_right_pwm("desired_right_pwm", &desired_right_pwm);
+
 void setup() 
 {
-	//Serial.begin(9600);
+	//Serial.begin(115200);
 
   	// initialize LED digital pin as an output.
   	pinMode(LED_BUILTIN, OUTPUT);
@@ -116,7 +122,7 @@ void setup()
 	TCCR1A = 0;
 	TCCR1B = 0;
 	TCCR1B |= (1<<CS10); //prescaler 1
-	TIMSK1 |= (1<TOIE1); //enable timer overflow
+	TIMSK1 |= (1<<TOIE1); //enable timer overflow
 
 	// encoders
 	
@@ -140,30 +146,65 @@ void setup()
   	digitalWrite(LEFT_FR, LOW);
   	digitalWrite(RIGHT_FR, LOW);
   	analogWrite(LEFT_PWM, 0);
-  	analogWrite(RIGHT_PWM, 0);
+  	//analogWrite(RIGHT_PWM, 0);
+  	digitalWrite(RIGHT_PWM, HIGH);
+
 
   	nh.initNode();
   	nh.subscribe(sub_right);
   	nh.subscribe(sub_left);
+	nh.advertise(pub_actual_right_pwm);
+	nh.advertise(pub_desired_right_pwm);
 
 	//turn PID controllers on
 	leftWheelPidController.SetMode(AUTOMATIC);
 	rightWheelPidController.SetMode(AUTOMATIC);
 }
 
-ISR(TIMER_OVF_vect) // 4ms timer
+ISR(TIMER1_OVF_vect) // 4ms timer
 {
-	double left_speed = 60.0 * (left_tick / PulsesPerRevolution) / 0.4; //rpm
-	double right_speed = 60.0 * (left_tick / PulsesPerRevolution) / 0.4; // rpm
+	double left_speed = 6000.0 * (left_tick / PulsesPerRevolution) / 0.4; //rpm
+	double right_speed = 6000.0 * (right_tick / PulsesPerRevolution) / 0.4; // rpm
+
+	String l1 = String(right_tick);
+	char *l1_convert = l1.c_str();
+	//nh.loginfo(l1_convert);
 
 	left_tick = 0;
 	right_tick = 0;
 
-	CalculatedLeftPwm = map(left_speed,0,MaxRpm,0,255);
-	CalculatedRightPwm = map(left_speed,0,MaxRpm,0,255);
+	ActualLeftPwm = map(left_speed,0,MaxRpm,0,255);
+	ActualRightPwm = map(right_speed,0,MaxRpm,0,255);
+
 
 	leftWheelPidController.Compute();
 	rightWheelPidController.Compute();
+
+
+	//String l1 = "LEFT -- Desired PWM: " + String(DesiredLeftPwm);
+	//char *l1_convert = l1.c_str();
+	//nh.loginfo(l1_convert);
+
+//	String l2 = "LEFT -- Calculated PWM: " + String(ActualLeftPwm);
+//	char *l2_convert = l2.c_str();
+//	nh.loginfo(l2_convert);
+//
+//	String l3 = "LEFT -- Corrected PWM: " + String(CorrectedLeftPwm);
+//	char *l3_convert = l3.c_str();
+//	nh.loginfo(l3_convert);
+//
+//	String r1 = "RIGHT-- Desired PWM: " + String(DesiredRightPwm);
+//	char *r1_convert = r1.c_str();
+//	nh.loginfo(r1_convert);
+//
+//	String r2 = "RIGHT -- Calculated PWM: " + String(ActualRightPwm);
+//	char *r2_convert = r2.c_str();
+//	nh.loginfo(r2_convert);
+//
+//	String r3 = "RIGHT -- Corrected PWM: " + String(CorrectedRightPwm);
+//	char *r3_convert = r3.c_str();
+//	nh.loginfo(r3_convert);
+
 
 	WriteCorrectedPwms();
 
@@ -171,7 +212,14 @@ ISR(TIMER_OVF_vect) // 4ms timer
 
 void loop()
 {
+	actual_right_pwm.data = ActualRightPwm;
+	//pub_actual_right_pwm.publish(&actual_right_pwm);
+
+
+	desired_right_pwm.data = DesiredRightPwm;
+	//pub_desired_right_pwm.publish(&desired_right_pwm);
 	nh.spinOnce();
+	//delay(1000);
 }
 
 void left_encoder()
