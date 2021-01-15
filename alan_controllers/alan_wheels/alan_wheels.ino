@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include <PID_v1.h>
 #include <std_msgs/Float32.h>
+#include <stdlib.h>
 
 //ROS variables
 ros::NodeHandle nh;
@@ -12,7 +13,7 @@ unsigned long right_tick = 0;
 
 
 // PID variables
-double Kp= 10, Ki = 100 , Kd = 1000;
+double Kp= 10, Ki = 10 , Kd = 10;
 double ActualLeftPwm = 0, CorrectedLeftPwm = 0, DesiredLeftPwm = 0;
 double ActualRightPwm = 0, CorrectedRightPwm = 0, DesiredRightPwm = 0;
 PID leftWheelPidController (&ActualLeftPwm, &CorrectedLeftPwm, &DesiredLeftPwm, Kp, Ki, Kd, DIRECT); 
@@ -29,7 +30,7 @@ PID rightWheelPidController(&ActualRightPwm, &CorrectedRightPwm, &DesiredRightPw
 #define RIGHT_PWM 5
 #define RIGHT_FR 4
 
-bool LeftDirectionForward = true, RightDirectionForward = true;
+bool LeftDirectionForward = true, RightDirectionForward = true, Stop = true;
 
 //encoders
 #define RIGHT_ENCODER 2
@@ -37,7 +38,7 @@ bool LeftDirectionForward = true, RightDirectionForward = true;
 
 //motors
 int MaxRpm = 230;
-int PulsesPerRevolution = 384;
+double PulsesPerRevolution = 384.00;
 
 
 
@@ -45,10 +46,12 @@ void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsig
 {
 	//factor must be between -1 and 1
 	float factor = max(min(wheel_power.data,1.0f),-1.0f);
+	Stop = (factor == 0);
 
 	//We want to move forward
 	if (factor > 0)
 	{
+		
 		nh.loginfo("Factor >= 0");
 		
 		digitalWrite(fr_pin, LOW);
@@ -70,7 +73,7 @@ void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsig
 	}
 
 	// Set our desired PWM that the PID Controller will work towards
-	unsigned int pwm = (unsigned int)(255 * factor);
+	unsigned int pwm = (unsigned int)(255 * abs(factor));
 
 	if ( pwm_pin == LEFT_PWM)
 	{
@@ -146,8 +149,7 @@ void setup()
   	digitalWrite(LEFT_FR, LOW);
   	digitalWrite(RIGHT_FR, LOW);
   	analogWrite(LEFT_PWM, 0);
-  	//analogWrite(RIGHT_PWM, 0);
-  	digitalWrite(RIGHT_PWM, HIGH);
+  	analogWrite(RIGHT_PWM, 0);
 
 
   	nh.initNode();
@@ -156,6 +158,7 @@ void setup()
 	nh.advertise(pub_actual_right_pwm);
 	nh.advertise(pub_desired_right_pwm);
 
+
 	//turn PID controllers on
 	leftWheelPidController.SetMode(AUTOMATIC);
 	rightWheelPidController.SetMode(AUTOMATIC);
@@ -163,12 +166,14 @@ void setup()
 
 ISR(TIMER1_OVF_vect) // 4ms timer
 {
-	double left_speed = 6000.0 * (left_tick / PulsesPerRevolution) / 0.4; //rpm
-	double right_speed = 6000.0 * (right_tick / PulsesPerRevolution) / 0.4; // rpm
+	// no need for PID calculations on stop
+	if (Stop)
+	{
+		return;
+	}
+	double left_speed = 60000.0 * (left_tick / PulsesPerRevolution) / 4.0; //rpm
+	double right_speed = 60000.0 * (right_tick / PulsesPerRevolution) / 4.0; // rpm
 
-	String l1 = String(right_tick);
-	char *l1_convert = l1.c_str();
-	//nh.loginfo(l1_convert);
 
 	left_tick = 0;
 	right_tick = 0;
@@ -176,50 +181,22 @@ ISR(TIMER1_OVF_vect) // 4ms timer
 	ActualLeftPwm = map(left_speed,0,MaxRpm,0,255);
 	ActualRightPwm = map(right_speed,0,MaxRpm,0,255);
 
+	// send over PWM desired and actual values for calibration
+	actual_right_pwm.data = ActualRightPwm;
+	//pub_actual_right_pwm.publish(&actual_right_pwm);
+
+	desired_right_pwm.data = DesiredRightPwm;
+	//pub_desired_right_pwm.publish(&desired_right_pwm);
 
 	leftWheelPidController.Compute();
 	rightWheelPidController.Compute();
 
-
-	//String l1 = "LEFT -- Desired PWM: " + String(DesiredLeftPwm);
-	//char *l1_convert = l1.c_str();
-	//nh.loginfo(l1_convert);
-
-//	String l2 = "LEFT -- Calculated PWM: " + String(ActualLeftPwm);
-//	char *l2_convert = l2.c_str();
-//	nh.loginfo(l2_convert);
-//
-//	String l3 = "LEFT -- Corrected PWM: " + String(CorrectedLeftPwm);
-//	char *l3_convert = l3.c_str();
-//	nh.loginfo(l3_convert);
-//
-//	String r1 = "RIGHT-- Desired PWM: " + String(DesiredRightPwm);
-//	char *r1_convert = r1.c_str();
-//	nh.loginfo(r1_convert);
-//
-//	String r2 = "RIGHT -- Calculated PWM: " + String(ActualRightPwm);
-//	char *r2_convert = r2.c_str();
-//	nh.loginfo(r2_convert);
-//
-//	String r3 = "RIGHT -- Corrected PWM: " + String(CorrectedRightPwm);
-//	char *r3_convert = r3.c_str();
-//	nh.loginfo(r3_convert);
-
-
 	WriteCorrectedPwms();
-
 }
 
 void loop()
 {
-	actual_right_pwm.data = ActualRightPwm;
-	//pub_actual_right_pwm.publish(&actual_right_pwm);
-
-
-	desired_right_pwm.data = DesiredRightPwm;
-	//pub_desired_right_pwm.publish(&desired_right_pwm);
 	nh.spinOnce();
-	//delay(1000);
 }
 
 void left_encoder()

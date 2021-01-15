@@ -14,7 +14,7 @@ class MovementType(Enum):
     Stopped = 5
 
 class RobotMovement:
-    def __init__(self,speed = 0.01):
+    def __init__(self,speed = 1):
         rospy.init_node('robot_movement')
         self.speed = speed
         self.right_wheel_pub = rospy.Publisher('wheel_power_right'        ,Float32,queue_size=1)
