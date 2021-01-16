@@ -6,7 +6,7 @@ import rospy
 class PidCalibrationControl():
     def __init__(self):
         rospy.init_node('pid_calibration')
-        self.pid_calibration_pub = rospy.Publisher('pid_calibration_pub',Float32MultiArray,queue_size=1)
+        self.pid_calibration_pub = rospy.Publisher('pid_calibration',Float32MultiArray,queue_size=1)
         self.create_and_display_widgets()
 
     def create_and_display_widgets(self):
@@ -38,10 +38,14 @@ class PidCalibrationControl():
 
         self.root.mainloop()
 
-    def accept_pid_settings(self):
+    def accept_pid_settings(self,event):
         kp = float(self.kp_entry.get())
         ki = float(self.ki_entry.get())
         kd = float(self.kd_entry.get())
-        self.pib_calibration_pub.publish(Float32MultiArray([kp,ki,kd]))
+        
+        message = Float32MultiArray()
+        message.data = [kp,ki,kd]
+        self.pid_calibration_pub.publish(message)
+
 
 control = PidCalibrationControl()
