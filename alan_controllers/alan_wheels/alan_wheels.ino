@@ -2,18 +2,19 @@
 #include "Arduino.h"
 #include <PID_v1.h>
 #include <std_msgs/Float32.h>
+//#include <std_msgs/Float32MultiArray.h>
 #include <stdlib.h>
 
 //ROS variables
 ros::NodeHandle nh;
 
 //encoder variables
-unsigned long left_tick = 0;
-unsigned long right_tick = 0;
+int left_tick = 0;
+int right_tick = 0;
 
 
 // PID variables
-double Kp= 10, Ki = 10 , Kd = 10;
+float Kp = 0, Ki = 0 , Kd = 0;
 double ActualLeftPwm = 0, CorrectedLeftPwm = 0, DesiredLeftPwm = 0;
 double ActualRightPwm = 0, CorrectedRightPwm = 0, DesiredRightPwm = 0;
 PID leftWheelPidController (&ActualLeftPwm, &CorrectedLeftPwm, &DesiredLeftPwm, Kp, Ki, Kd, DIRECT); 
@@ -38,9 +39,7 @@ bool LeftDirectionForward = true, RightDirectionForward = true, Stop = true;
 
 //motors
 int MaxRpm = 230;
-double PulsesPerRevolution = 384.00;
-
-
+int PulsesPerRevolution = 384;
 
 void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsigned int fr_pin) 
 {
@@ -101,15 +100,45 @@ void leftWheelCb( const std_msgs::Float32 &wheel_power)
 	turnWheel(wheel_power,LEFT_PWM,LEFT_FR);
 	LeftDirectionForward = wheel_power.data >= 0;
 }
+//void pidCalibrationCb( const std_msgs::Float32MultiArray &pid_calibration)
+//{
+//	int length = sizeof(pid_calibration.data) / sizeof(pid_calibration.data[0]);
+//
+//	if ( length == 3) 
+//	{
+//		String message = "Kp: " + String(pid_calibration.data[0]);
+//		char *message_convert = message.c_str();
+//		nh.loginfo(message_convert);
+//
+//		message = "Ki: " + String(pid_calibration.data[1]);
+//		*message_convert = message.c_str();
+//		nh.loginfo(message_convert);
+//
+//		message = "Kd: " + String(pid_calibration.data[2]);
+//		*message_convert = message.c_str();
+//		nh.loginfo(message_convert);
+//
+//		Kp = pid_calibration.data[0];
+//		Ki = pid_calibration.data[1];
+//		Kd = pid_calibration.data[2];
+//	}
+//}
 
 ros::Subscriber<std_msgs::Float32> sub_right("wheel_power_right", &rightWheelCb);
 ros::Subscriber<std_msgs::Float32> sub_left("wheel_power_left", &leftWheelCb);
+//ros::Subscriber<std_msgs::Float32MultiArray> pid_calibration("pid_calibration", &pidCalibrationCb);
 
-std_msgs::Float32 actual_right_pwm;
-std_msgs::Float32 desired_right_pwm;
-
-ros::Publisher pub_actual_right_pwm("actual_right_pwm", &actual_right_pwm);
-ros::Publisher pub_desired_right_pwm("desired_right_pwm", &desired_right_pwm);
+//std_msgs::Float32 actual_right_pwm;
+//std_msgs::Float32 desired_right_pwm;
+//
+//std_msgs::Float32 actual_left_pwm;
+//std_msgs::Float32 desired_left_pwm;
+//
+//ros::Publisher pub_actual_right_pwm("actual_right_pwm", &actual_right_pwm);
+//ros::Publisher pub_desired_right_pwm("desired_right_pwm", &desired_right_pwm);
+//
+//ros::Publisher pub_actual_left_pwm("actual_left_pwm", &actual_left_pwm);
+//ros::Publisher pub_desired_left_pwm("desired_left_pwm", &desired_left_pwm);
 
 void setup() 
 {
@@ -127,7 +156,10 @@ void setup()
 	TCCR1B |= (1<<CS10); //prescaler 1
 	TIMSK1 |= (1<<TOIE1); //enable timer overflow
 
-	// encoders
+
+	//specifically for pin 5 and 6: Reference - https://www.etechnophiles.com/change-frequency-pwm-pins-arduino-uno/
+	TCCR0B = TCCR0B & B11111000 | B00000010; // for PWM frequency of 7812.50 Hz
+
 	
 	// hall effect sensor is an open drain output. This means that the
 	// sensor will only pull line low, but it won't pull it high. It will just
@@ -157,6 +189,8 @@ void setup()
   	nh.subscribe(sub_left);
 	nh.advertise(pub_actual_right_pwm);
 	nh.advertise(pub_desired_right_pwm);
+	nh.advertise(pub_actual_left_pwm);
+	nh.advertise(pub_desired_left_pwm);
 
 
 	//turn PID controllers on
@@ -171,8 +205,8 @@ ISR(TIMER1_OVF_vect) // 4ms timer
 	{
 		return;
 	}
-	double left_speed = 60000.0 * (left_tick / PulsesPerRevolution) / 4.0; //rpm
-	double right_speed = 60000.0 * (right_tick / PulsesPerRevolution) / 4.0; // rpm
+	double left_speed = 60000.0 * (left_tick / (float)PulsesPerRevolution) / 4.0; //rpm
+	double right_speed = 60000.0 * (right_tick / (float)PulsesPerRevolution) / 4.0; // rpm
 
 
 	left_tick = 0;
@@ -181,12 +215,6 @@ ISR(TIMER1_OVF_vect) // 4ms timer
 	ActualLeftPwm = map(left_speed,0,MaxRpm,0,255);
 	ActualRightPwm = map(right_speed,0,MaxRpm,0,255);
 
-	// send over PWM desired and actual values for calibration
-	actual_right_pwm.data = ActualRightPwm;
-	//pub_actual_right_pwm.publish(&actual_right_pwm);
-
-	desired_right_pwm.data = DesiredRightPwm;
-	//pub_desired_right_pwm.publish(&desired_right_pwm);
 
 	leftWheelPidController.Compute();
 	rightWheelPidController.Compute();
@@ -196,7 +224,21 @@ ISR(TIMER1_OVF_vect) // 4ms timer
 
 void loop()
 {
+	// send over PWM desired and actual values for calibration
+//	actual_right_pwm.data = ActualRightPwm;
+//	pub_actual_right_pwm.publish(&actual_right_pwm);
+//
+//	desired_right_pwm.data = DesiredRightPwm;
+//	pub_desired_right_pwm.publish(&desired_right_pwm);
+//
+//	actual_left_pwm.data = ActualLeftPwm;
+//	pub_actual_left_pwm.publish(&actual_left_pwm);
+//
+//	desired_left_pwm.data = DesiredLeftPwm;
+//	pub_desired_left_pwm.publish(&desired_left_pwm);
+
 	nh.spinOnce();
+	//delay(500);
 }
 
 void left_encoder()
