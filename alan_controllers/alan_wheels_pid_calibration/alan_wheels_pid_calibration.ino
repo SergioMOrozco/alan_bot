@@ -1,16 +1,9 @@
 #include <ros.h>
 #include "Arduino.h"
-#include <PID_v1.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/Int32.h>
-#include <std_msgs/Float32.h>
+#include <std_msgs/Float64.h>
 #include <stdlib.h>
-
-//ROS variables : need to decrease publishing rate or increase bufffer: reference - https://github.com/tonybaltovski/ros_arduino/issues/10
-ros::NodeHandle nh;
-//encoder variables
-int left_tick = 0;
-int right_tick = 0;
 
 // wheels
 #define LEFT_PWM 6
@@ -22,73 +15,44 @@ int right_tick = 0;
 #define RIGHT_ENCODER 2
 #define LEFT_ENCODER 3
 
+//Prototypes
+void leftWheelControlEffortCallback(const std_msgs::Float64&);
 
-bool Stopped = true;
+//PID variables
+std_msgs::Float64 LeftWheelState, LeftWheelControlEffort, LeftWheelSetPoint;
+std_msgs::Float64 RightWheelState, RightWheelControlEffort, RightWheelSetPoint;
 
-// PID variables
-float Kp = 0, Ki = 0 , Kd = 0;
-double ActualLeftPwm = 0, CorrectedLeftPwm = 0, DesiredLeftPwm = 0;
-double ActualRightPwm = 0, CorrectedRightPwm = 0, DesiredRightPwm = 0;
+ros::NodeHandle nh;
+ros::Publisher LeftWheelSetPointPublisher("setpoint",&LeftWheelSetPoint);
+ros::Publisher LeftWheelStatePublisher("state",&LeftWheelState);
+ros::Subscriber<std_msgs::Float64> LeftWheelControlEffortSubscriber("control_effort",&leftWheelControlEffortCallback);
 
-PID leftWheelPidController (&ActualLeftPwm, &CorrectedLeftPwm, &DesiredLeftPwm, Kp, Ki, Kd, DIRECT); 
-PID rightWheelPidController(&ActualRightPwm, &CorrectedRightPwm, &DesiredRightPwm, Kp, Ki, Kd, DIRECT); 
+unsigned int left_tick = 0;
+unsigned int right_tick = 0;
 
-std_msgs::Float32 actual_right_pwm;
-std_msgs::Float32 desired_right_pwm;
-std_msgs::Float32 actual_left_pwm;
-std_msgs::Float32 desired_left_pwm;
-
-ros::Publisher pub_actual_right_pwm("actual_right_pwm", &actual_right_pwm);
-ros::Publisher pub_desired_right_pwm("desired_right_pwm", &desired_right_pwm);
-ros::Publisher pub_actual_left_pwm("actual_left_pwm", &actual_left_pwm);
-ros::Publisher pub_desired_left_pwm("desired_left_pwm", &desired_left_pwm);
-
-void pidCalibrationCb( const std_msgs::Float32MultiArray &pid_calibration)
-{
-
-	int length = sizeof(pid_calibration.data) / sizeof(pid_calibration.data[0]);
-
-	if ( length == 3) 
-	{
-		String message = "Kp: " + String(pid_calibration.data[0]);
-		char *message_convert = message.c_str();
-		nh.loginfo(message_convert);
-
-		message = "Ki: " + String(pid_calibration.data[1]);
-		*message_convert = message.c_str();
-		nh.loginfo(message_convert);
-
-		message = "Kd: " + String(pid_calibration.data[2]);
-		*message_convert = message.c_str();
-		nh.loginfo(message_convert);
-
-		Kp = pid_calibration.data[0];
-		Ki = pid_calibration.data[1];
-		Kd = pid_calibration.data[2];
-		leftWheelPidController.SetTunings(Kp,Ki,Kd);
-		rightWheelPidController.SetTunings(Kp,Ki,Kd);
-	}
-}
-void stopMotorsCb( const std_msgs::Float32 &stop_motors)
-{
-	Stopped = stop_motors.data == 0;
-}
-
-ros::Subscriber<std_msgs::Float32MultiArray> pid_calibration("pid_calibration", &pidCalibrationCb);
-ros::Subscriber<std_msgs::Float32> stop_motors("stop_motors", &stopMotorsCb);
 
 //motors
-int MaxRpm = 230;
+int MaxRpm = 85;
 int PulsesPerRevolution = 384;
 
 
+void leftWheelControlEffortCallback(const std_msgs::Float64& control_effort) {
+	String lol = String("Control Effort" + String(control_effort.data));
+	char* lol_c = lol.c_str();
+	nh.loginfo(lol_c);
+	analogWrite(LEFT_PWM,control_effort.data);
+}
+
 void setup() {
+	Serial.begin(115200);
+
 	// Setup Timer
 	// Reference: https://www.youtube.com/watch?v=IdL0_ZJ7V2s&t=110s
 	TCCR1A = 0;
 	TCCR1B = 0;
-	TCCR1B |= (1<<CS10); //prescaler 1
-	TIMSK1 |= (1<<TOIE1); //enable timer overflow
+	OCR1A = 31249;
+	TCCR1B |= (1<<CS12) | (1<<WGM12); //prescaler 256, CTCMode
+	TIMSK1 |= (1<<OCIE1A); //enable timer overflow
 
 	//specifically for pin 5 and 6: Reference - https://www.etechnophiles.com/change-frequency-pwm-pins-arduino-uno/
 	TCCR0B = TCCR0B & B11111000 | B00000010; // for PWM frequency of 7812.50 Hz
@@ -115,77 +79,42 @@ void setup() {
   	analogWrite(LEFT_PWM, 0);
   	analogWrite(RIGHT_PWM, 0);
 
-
   	nh.initNode();
-	nh.advertise(pub_actual_right_pwm);
-	nh.advertise(pub_desired_right_pwm);
-	nh.advertise(pub_actual_left_pwm);
-	nh.advertise(pub_desired_left_pwm);
-	nh.subscribe(pid_calibration);
-	nh.subscribe(stop_motors);
-
-
-	//turn PID controllers on
-	leftWheelPidController.SetMode(AUTOMATIC);
-	rightWheelPidController.SetMode(AUTOMATIC);
+	nh.advertise(LeftWheelSetPointPublisher);
+	nh.advertise(LeftWheelStatePublisher);
+	nh.subscribe(LeftWheelControlEffortSubscriber);
 }
 
-ISR(TIMER1_OVF_vect) // 4ms timer
+ISR(TIMER1_COMPA_vect) // 0.5s timer
 {
-	if (Stopped) {
-		return;
+	double left_speed = 60.0 * (left_tick / (float)PulsesPerRevolution) / 0.5; //rpm
+	double right_speed = 60.0 * (right_tick / (float)PulsesPerRevolution) / 0.5; // rpm
+
+	if (left_speed > MaxRpm || right_speed > MaxRpm) 
+	{
+		nh.logwarn("Calculating RPM greater than max RPM. Adjust Max RPM.");
 	}
-	double left_speed = 60000.0 * (left_tick / (float)PulsesPerRevolution) / 4.0; //rpm
-	double right_speed = 60000.0 * (right_tick / (float)PulsesPerRevolution) / 4.0; // rpm
 
 	left_tick = 0;
 	right_tick = 0;
 
-	ActualLeftPwm = map(left_speed,0,MaxRpm,0,255);
-	ActualRightPwm = map(right_speed,0,MaxRpm,0,255);
+	LeftWheelState.data = map(left_speed,0,MaxRpm,0,255);
+	RightWheelState.data = map(right_speed,0,MaxRpm,0,255);
 
-	leftWheelPidController.Compute();
-	rightWheelPidController.Compute();
-
-	WriteCorrectedPwms();
+	String lol = String("State: " + String(LeftWheelState.data));
+	char* lol_c = lol.c_str();
+	nh.loginfo(lol_c);
+	
+	LeftWheelStatePublisher.publish(&LeftWheelState);
 }
 
 void loop() {
 	nh.spinOnce();
 
-	// send over PWM desired and actual values for calibration
-	actual_right_pwm.data = ActualRightPwm;
-	pub_actual_right_pwm.publish(&actual_right_pwm);
+	LeftWheelSetPoint.data = 128;
+	RightWheelSetPoint.data = 128;
 
-	desired_right_pwm.data = DesiredRightPwm;
-	pub_desired_right_pwm.publish(&desired_right_pwm);
-
-	actual_left_pwm.data = ActualLeftPwm;
-	pub_actual_left_pwm.publish(&actual_left_pwm);
-
-	desired_left_pwm.data = DesiredLeftPwm;
-	pub_desired_left_pwm.publish(&desired_left_pwm);
-
-	if (!Stopped) 
-	{
-		//move forward for one second
-		DesiredLeftPwm = 255;
-		digitalWrite(LEFT_FR, LOW);
-		analogWrite(LEFT_PWM, DesiredLeftPwm);
-
-		DesiredRightPwm = 255;
-		digitalWrite(RIGHT_FR, LOW);
-		analogWrite(RIGHT_PWM, DesiredRightPwm);
-	}
-	else {
-  		digitalWrite(LEFT_FR, HIGH);
-  		digitalWrite(RIGHT_FR, HIGH);
-  		digitalWrite(LEFT_PWM, HIGH);
-  		digitalWrite(RIGHT_PWM, HIGH);
-		ActualLeftPwm = 0; 
-		ActualRightPwm = 0;
- 
-	}
+	LeftWheelSetPointPublisher.publish(&LeftWheelSetPoint);
 	delay(1000);
 }
 
@@ -196,13 +125,4 @@ void left_encoder()
 void right_encoder() 
 {
 	right_tick += 1;
-}
-
-void WriteCorrectedPwms() 
-{
-	//unsigned int leftPwm = LeftDirectionForward ? CorrectedLeftPwm : 255 - CorrectedLeftPwm;
-	//unsigned int rightPwm = RightDirectionForward ? CorrectedRightPwm : 255 - CorrectedRightPwm;
-
-	analogWrite(LEFT_PWM, CorrectedLeftPwm);
-	analogWrite(RIGHT_PWM, CorrectedRightPwm);
 }
