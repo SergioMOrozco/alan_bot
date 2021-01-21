@@ -1,13 +1,46 @@
 <launch>
-	<node name="left_wheel_pid" pkg="pid" type="controller">
-		<param name="Kp" value="10.0" />
+	<!-- <node name="left_wheel_pid" pkg="pid" ns="left_wheel_pid" type="controller">
+		<param name="Kp" value="0.0" />
 		<param name="Ki" value="0.0" />
 		<param name="Kd" value="0.0" />
 		<param name="upper_limit" value="255" />
 		<param name="lower_limit" value="0" />
-		<param name="windup_limit" value="10" />
+		<param name="windup_limit" value="255" />
 		<param name="max_loop_frequency" value="100.0" />
 		<param name="min_loop_frequency" value="100.0" />
 	</node>
+
+	<node name="right_wheel_pid" pkg="pid" ns="right_wheel_pid" type="controller">
+		<param name="Kp" value="0.0" />
+		<param name="Ki" value="0.0" />
+		<param name="Kd" value="0.0" />
+		<param name="upper_limit" value="255" />
+		<param name="lower_limit" value="0" />
+		<param name="windup_limit" value="255" />
+		<param name="max_loop_frequency" value="100.0" />
+		<param name="min_loop_frequency" value="100.0" /> 
+	</node> -->
+
+
+	<node name="left_wheel_pid" pkg="pid" type="controller" >
+		<param name="Kp" value="0.0" />
+		<param name="Ki" value="0.0" />
+		<param name="Kd" value="0.0" />
+      		<param name="upper_limit" value="255" />
+      		<param name="lower_limit" value="115" />
+      		<param name="windup_limit" value="140" />
+      		<param name="max_loop_frequency" value="100.0" />
+      		<param name="min_loop_frequency" value="100.0" />
+    	</node>
+    	<!-- rqt_plot is a resource hog, so if you're seeing high CPU usage, don't launch rqt_plot  -->
+    	<node name="rqt_plot" pkg="rqt_plot" type="rqt_plot"
+    	args="control_effort/data
+	      state/data
+	      setpoint/data"
+	      />
+
+    	<node name="rqt_reconfigure" pkg="rqt_reconfigure" type="rqt_reconfigure" />
+
+    	<!-- <node name="rqt_robot_monitor" pkg="rqt_robot_monitor" type="rqt_robot_monitor" /> -->
 </launch>
 
