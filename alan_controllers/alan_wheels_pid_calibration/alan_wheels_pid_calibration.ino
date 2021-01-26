@@ -16,32 +16,31 @@
 #define RIGHT_ENCODER 2
 #define LEFT_ENCODER 3
 
-//Prototypes
-void leftWheelControlEffortCallback(const std_msgs::Float64&);
-void rightWheelControlEffortCallback(const std_msgs::Float64&);
-
-unsigned long current_t = 0, prev_t = 0;
+//prototypes 
+void left_encoder();
+void right_encoder();
 
 //PID variables
-//float Kp = 0.6, Ki = .01 , Kd = 10;
-//float Kp = 0.6, Ki = .008 , Kd = 100;
-float Kp = 0.3, Ki =0.01 , Kd = 1000;
+float Kp = 0.3, Ki =0.01 , Kd = 1000; //original
 
 double LeftWheelState = 0, LeftWheelControlEffort = 0, LeftWheelSetPoint = 0;
-PID leftWheelPidController (&LeftWheelState, &LeftWheelControlEffort, &LeftWheelSetPoint, Kp, Ki, Kd, DIRECT); 
+double RightWheelState = 0, RightWheelControlEffort = 0, RightWheelSetPoint = 0;
+PID RightWheelPidController (&RightWheelState, &RightWheelControlEffort, &RightWheelSetPoint, Kp, Ki, Kd, DIRECT); 
+PID LeftWheelPidController (&LeftWheelState, &LeftWheelControlEffort, &LeftWheelSetPoint, Kp, Ki, Kd, DIRECT); 
 
 ros::NodeHandle nh;
 
-unsigned int left_tick = 0;
-unsigned int right_tick = 0;
+unsigned int LeftTick = 0;
+unsigned int RightTick = 0;
 
 
 //motors
-int MaxRpm = 180; // max rpm at 6v
+int DesiredPwm = 240;
+int MinPwm = 115; //pwm where motor stops moving at 6v
+int MaxPwm = 255;
+//int MaxRpm = 180; // max rpm at 6v
+int MaxRpm = 96; // max rpm at 6v with current load
 int PulsesPerRevolution = 384;
-int desiredPwm = 180;
-int minPwm = 115; //pwm where motor stops moving at 6v
-int maxPwm = 255;
 
 void setup() {
 	Serial.begin(115200);
@@ -82,79 +81,71 @@ void setup() {
 
   	nh.initNode();
 
-	leftWheelPidController.SetOutputLimits(minPwm,maxPwm);
+	LeftWheelPidController.SetOutputLimits(MinPwm,MaxPwm);
+	RightWheelPidController.SetOutputLimits(MinPwm,MaxPwm);
 
 	//turn PID Controllers on
-	leftWheelPidController.SetMode(AUTOMATIC);
+	LeftWheelPidController.SetMode(AUTOMATIC);
+	RightWheelPidController.SetMode(AUTOMATIC);
+
+	LeftWheelSetPoint = DesiredPwm;
+	RightWheelSetPoint = DesiredPwm;
 }
 
 ISR(TIMER1_COMPA_vect) // 0.5s timer
 {
+	String leftStateLog = String("Left State: " + String(LeftWheelState));
+	char* leftStateLogConverted = leftStateLog.c_str();
+	nh.loginfo(leftStateLogConverted);
 
-	if (true) {
-		return;
-	}
-
-	double left_speed = 60 * (left_tick / (float)PulsesPerRevolution) / 0.5; //rpm
-	double right_speed = 60 * (right_tick / (float)PulsesPerRevolution) /0.5; // rpm
-
-
-	//right_tick = 0;
-	left_tick = 0;
-
-	LeftWheelState = map(left_speed,0,MaxRpm,minPwm,maxPwm);
-
-	String lol = String("Left Tick: " + String(LeftWheelState));
-	char* lol_c = lol.c_str();
-	nh.loginfo(lol_c);
+	String rightStateLog = String("Right State: " + String(RightWheelState));
+	char* rightStateLogConverted = rightStateLog.c_str();
+	nh.loginfo(rightStateLogConverted);
 }
 
 ISR(TIMER1_COMPB_vect) // 0.25s timer
 {
-	if (false) {
-		return;
-	}
+	double leftSpeed = 60 * (LeftTick / (float)PulsesPerRevolution) / 0.25; //rpm
+	double rightSpeed = 60 * (RightTick / (float)PulsesPerRevolution) /0.25; // rpm
 
-	double left_speed = 60 * (left_tick / (float)PulsesPerRevolution) / 0.25; //rpm
-	double right_speed = 60 * (right_tick / (float)PulsesPerRevolution) /0.25; // rpm
+	RightTick = 0;
+	LeftTick = 0;
 
-
-	//right_tick = 0;
-	left_tick = 0;
-
-	LeftWheelState = map(left_speed,0,MaxRpm,minPwm,maxPwm);
-
-	String lol = String("Left Tick: " + String(LeftWheelState));
-	char* lol_c = lol.c_str();
-	nh.loginfo(lol_c);
+	LeftWheelState = map(leftSpeed ,0,MaxRpm,MinPwm,MaxPwm);
+	RightWheelState = map(rightSpeed ,0,MaxRpm,MinPwm,MaxPwm);
 }
 
 void loop() {
 	nh.spinOnce();
 
-	LeftWheelSetPoint = desiredPwm;
+	LeftWheelPidController.Compute();
+	RightWheelPidController.Compute();
 
-	leftWheelPidController.Compute();
-
-
-
-	if (LeftWheelControlEffort == minPwm) {
+	// may not need to set FR and PWM to high
+	if (LeftWheelControlEffort == MinPwm) {
 		digitalWrite(LEFT_FR,HIGH);
 		digitalWrite(LEFT_PWM,HIGH);
 	}
 	else {
 		digitalWrite(LEFT_FR,LOW);
 		analogWrite(LEFT_PWM, LeftWheelControlEffort);
-		//digitalWrite(LEFT_FR,HIGH);
-		//digitalWrite(LEFT_PWM,HIGH);
+	}
+
+	if (RightWheelControlEffort == MinPwm) {
+		digitalWrite(RIGHT_FR,HIGH);
+		digitalWrite(RIGHT_PWM,HIGH);
+	}
+	else {
+		digitalWrite(RIGHT_FR,LOW);
+		analogWrite(RIGHT_PWM, RightWheelControlEffort);
 	}
 }
 
 void left_encoder()
 {
-	left_tick += 1;
+	LeftTick += 1;
 }
 void right_encoder() 
 {
-	right_tick += 1;
+	RightTick += 1;
 }
