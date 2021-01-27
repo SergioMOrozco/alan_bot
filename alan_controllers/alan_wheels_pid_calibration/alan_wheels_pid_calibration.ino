@@ -1,8 +1,5 @@
 #include <ros.h>
 #include "Arduino.h"
-#include <PID_v1.h>
-#include <std_msgs/Int32.h>
-#include <std_msgs/Float64.h>
 #include <stdlib.h>
 #include <PID_v1.h>
 
@@ -21,7 +18,8 @@ void left_encoder();
 void right_encoder();
 
 //PID variables
-float Kp = 0.3, Ki =0.01 , Kd = 1000; //original
+//float Kp = 0.3, Ki =0.01 , Kd = 1000; //original at 62500.00 Hz
+float Kp = 0.3, Ki =0.1 , Kd =5000 ; //original at 7812.50 Hz
 
 double LeftWheelState = 0, LeftWheelControlEffort = 0, LeftWheelSetPoint = 0;
 double RightWheelState = 0, RightWheelControlEffort = 0, RightWheelSetPoint = 0;
@@ -55,7 +53,7 @@ void setup() {
 	TIMSK1 |= (1<<OCIE1A) | (1<<OCIE1B); //enable timer overflow
 
 	//specifically for pin 5 and 6: Reference - https://www.etechnophiles.com/change-frequency-pwm-pins-arduino-uno/
-	TCCR0B = TCCR0B & B11111000 | B00000001; // for PWM frequency of 62500.00 Hz
+	TCCR0B = TCCR0B & B11111000 | B00000010; // for PWM frequency of 7812.50 Hz
 
 	// hall effect sensor is an open drain output. This means that the
 	// sensor will only pull line low, but it won't pull it high. It will just
