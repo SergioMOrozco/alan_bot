@@ -49,18 +49,15 @@ int PulsesPerRevolution = 384;
 
 bool LeftWheelBackward = false, RightWheelBackward = false;
 
-void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsigned int fr_pin) 
+void turnWheel(const std_msgs::Float32 &wheelPower, unsigned int pwmPin, unsigned int frPin) 
 {
-	//digitalWrite(fr_pin,LOW);
-	//analogWrite(pwm_pin,255);
-
 	//factor must be between -1 and 1
-	float factor = max(min(wheel_power.data,1.0f),-1.0f);
+	float factor = max(min(wheelPower.data,1.0f),-1.0f);
 
 	// Set our desired PWM that the PID Controller will work towards
 	int pwm = map(abs(factor) ,0 ,1 ,MinPwm,MaxPwm);
 
-	if ( pwm_pin == LEFT_PWM)
+	if ( pwmPin == LEFT_PWM)
 	{
 		LeftWheelBackward = factor < 0;
 		LeftWheelSetPoint = pwm; 
@@ -72,21 +69,21 @@ void turnWheel(const std_msgs::Float32 &wheel_power, unsigned int pwm_pin, unsig
 	}
 }
 
-void rightWheelCb( const std_msgs::Float32 &wheel_power)
+void rightWheelCb( const std_msgs::Float32 &wheelPower)
 {
-	String message = "Wheel Power - Right: " + String(wheel_power.data);
+	String message = "Wheel Power - Right: " + String(wheelPower.data);
 	char *message_convert = message.c_str();
 	nh.loginfo(message_convert);
 
-	turnWheel(wheel_power,RIGHT_PWM,RIGHT_FR);
+	turnWheel(wheelPower,RIGHT_PWM,RIGHT_FR);
 }
-void leftWheelCb( const std_msgs::Float32 &wheel_power)
+void leftWheelCb( const std_msgs::Float32 &wheelPower)
 {
-	String message = "Wheel Power - Left: " + String(wheel_power.data);
+	String message = "Wheel Power - Left: " + String(wheelPower.data);
 	char *message_convert = message.c_str();
 	nh.loginfo(message_convert);
 
-	turnWheel(wheel_power,LEFT_PWM,LEFT_FR);
+	turnWheel(wheelPower,LEFT_PWM,LEFT_FR);
 }
 
 void setup() 
@@ -146,13 +143,7 @@ void setup()
 
 ISR(TIMER1_COMPA_vect) // 0.5s timer
 {
-	String leftStateLog = String("Left State: " + String(LeftWheelState));
-	char* leftStateLogConverted = leftStateLog.c_str();
-	//nh.loginfo(leftStateLogConverted);
-
-	String rightStateLog = String("Right State: " + String(RightWheelState));
-	char* rightStateLogConverted = rightStateLog.c_str();
-	//nh.loginfo(rightStateLogConverted);
+	//this timer is needed to run the 0.25s timer for whatever reason
 }
 
 ISR(TIMER1_COMPB_vect) // 0.25s timer
@@ -188,11 +179,9 @@ void rightEncoder()
 
 void WriteControlEffort(unsigned int pwmPin, unsigned int frPin, double controlEffort, double setPoint, bool backward) 
 {
-	//should this be 255 or minPwm??
-	unsigned int pwm = backward ? MinPwm - controlEffort : controlEffort;
+	unsigned int pwm = backward ? MaxPwm - controlEffort : controlEffort;
 
-	if ((backward && setPoint >= MaxPwm) ||
-	    (!backward && setPoint <= MinPwm))
+	if (!backward && setPoint <= MinPwm)
 	{
 		digitalWrite(frPin,HIGH);
 		digitalWrite(pwmPin,HIGH);
