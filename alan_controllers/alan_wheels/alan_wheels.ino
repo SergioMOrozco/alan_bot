@@ -55,7 +55,10 @@ void turnWheel(const std_msgs::Float32 &wheelPower, unsigned int pwmPin, unsigne
 	float factor = max(min(wheelPower.data,1.0f),-1.0f);
 
 	// Set our desired PWM that the PID Controller will work towards
-	int pwm = map(abs(factor) ,0 ,1 ,MinPwm,MaxPwm);
+	int pwm = remap(abs(factor) ,0 ,1 ,MinPwm,MaxPwm);
+	String message = String(pwm);
+	char *message_convert = message.c_str();
+	nh.loginfo(message_convert);
 
 	if ( pwmPin == LEFT_PWM)
 	{
@@ -154,8 +157,8 @@ ISR(TIMER1_COMPB_vect) // 0.25s timer
 	RightTick = 0;
 	LeftTick = 0;
 
-	LeftWheelState = map(leftSpeed ,0,MaxRpm,MinPwm,MaxPwm);
-	RightWheelState = map(rightSpeed ,0,MaxRpm,MinPwm,MaxPwm);
+	LeftWheelState = remap(leftSpeed ,0,MaxRpm,MinPwm,MaxPwm);
+	RightWheelState = remap(rightSpeed ,0,MaxRpm,MinPwm,MaxPwm);
 }
 
 
@@ -199,5 +202,10 @@ void WriteControlEffort(unsigned int pwmPin, unsigned int frPin, double controlE
 
 		analogWrite(pwmPin, pwm);
 	}
+}
+
+double  remap(double x, double in_min, double in_max, double out_min, double out_max)
+{
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 

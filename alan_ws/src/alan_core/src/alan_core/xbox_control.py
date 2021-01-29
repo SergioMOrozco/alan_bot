@@ -6,9 +6,8 @@
 
 import os, struct, array
 import time
-import rospy
-from std_msgs.msg import Float32
 from fcntl import ioctl
+from alan_core.robot_movement import RobotMovement
 
 class XboxController():
 
@@ -86,11 +85,9 @@ class XboxController():
 
     def __init__(self):
 
-        # ROS variables
-        self.gas_pub = rospy.Publisher('gas',Float32,queue_size=10)
-        self.turn_pub = rospy.Publisher('turn',Float32,queue_size=10)
-        rospy.init_node('xbox_controller')
-        rospy.on_shutdown(self.shutdown)
+        self._power = 0
+        self._steer_power = 0
+        self.movement = RobotMovement()
 
         # name of axes and buttons
         self.axis_map = []
@@ -208,18 +205,17 @@ class XboxController():
     def process_button_press(self,button):
         if button == 'start':
             print ('shutting down due to pressing START...')
-            rospy.signal_shutdown("user pressed start on xbox controller")
+            self.shutdown()
 
     def send_axis_data(self, axis):
         if axis == 'gas':
             # map ranges from [-1,1] to [0,1]
-
-            data = Float32(self.remap(self.axis_states[axis],-1,1,0,1))
-            self.gas_pub.publish(data)
+            self._power = self.remap(self.axis_states[axis],-1,1,0,1)
+            self.movement.apply_power(self._power)
 
         elif axis == 'x':
-            data = Float32(self.axis_states[axis])
-            self.turn_pub.publish(data)
+            self._steering_power = self.axis_states[axis]
+            self.movement.apply_steering_power(self._steering_power)
 
     def remap(self,old_value,old_min,old_max,new_min,new_max):
         return (((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min
