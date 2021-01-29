@@ -77,35 +77,3 @@ class RobotMovement:
 
     def set_speed(self,speed):
         self.speed = speed
-
-#def on_press(key, movement):
-#    try:
-#        if key.char == 'w':
-#            movement.move_forward()
-#        elif key.char == 'a':
-#            movement.move_left()
-#        elif key.char == 's':
-#            movement.move_backward()
-#        elif key.char == 'd':
-#            movement.move_right()
-#    except AttributeError:
-#        pass
-#
-#def on_release(key, movement):
-#    if key == keyboard.Key.esc:
-#        # Stop listener
-#        movement.stop()
-#        return False
-#
-#if __name__ == "__main__":
-#    rospy.init_node('robot_movement_node')
-#    movement = RobotMovement()
-#
-#    on_press_func = lambda key: on_press(key, movement)
-#    on_release_func = lambda key: on_release(key, movement)
-#    # Collect events until released
-#    with Listener(
-#        on_press=on_press_func,
-#        on_release=on_release_func) as listener:
-#        listener.join()
-#

@@ -6,6 +6,8 @@
 
 import os, struct, array
 import time
+import rospy
+from std_msgs.msg import Float32
 from fcntl import ioctl
 
 class XboxController():
@@ -83,9 +85,18 @@ class XboxController():
     }
 
     def __init__(self):
-        ## name of axes and buttons
+
+        # ROS variables
+        self.gas_pub = rospy.Publisher('gas',Float32,queue_size=10)
+        self.turn_pub = rospy.Publisher('turn',Float32,queue_size=10)
+        rospy.init_node('xbox_controller')
+        rospy.on_shutdown(self.shutdown)
+
+        # name of axes and buttons
         self.axis_map = []
         self.button_map = []
+
+        self.looping = True
 
         # We'll store the states here.
         self.axis_states = {}
@@ -166,7 +177,7 @@ class XboxController():
 
     def loop(self):
         # Main event loop
-        while True:
+        while self.looping:
             evbuf = self.jsdev.read(8)
             if evbuf:
                 time, value, type, number = struct.unpack('IhBB', evbuf)
@@ -180,6 +191,8 @@ class XboxController():
                         self.button_states[button] = value
                         if value:
                             print("%s pressed" % (button))
+
+                            self.process_button_press(button)
                         else:
                             print("%s released" % (button))
         
@@ -191,16 +204,28 @@ class XboxController():
                         print("%s: %.3f" % (axis, fvalue))
 
                         self.send_axis_data(axis)
+
+    def process_button_press(self,button):
+        if button == 'start':
+            print ('shutting down due to pressing START...')
+            rospy.signal_shutdown("user pressed start on xbox controller")
+
     def send_axis_data(self, axis):
         if axis == 'gas':
             # map ranges from [-1,1] to [0,1]
-            data = self.remap(self.axis_states[axis],-1,1,0,1)
-            print('sending gas data...')
-        if axis == 'x':
-            print('sending turn data...')
+
+            data = Float32(self.remap(self.axis_states[axis],-1,1,0,1))
+            self.gas_pub.publish(data)
+
+        elif axis == 'x':
+            data = Float32(self.axis_states[axis])
+            self.turn_pub.publish(data)
 
     def remap(self,old_value,old_min,old_max,new_min,new_max):
         return (((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min
+
+    def shutdown(self):
+        self.looping = False
 
 
 if __name__ == "__main__":
