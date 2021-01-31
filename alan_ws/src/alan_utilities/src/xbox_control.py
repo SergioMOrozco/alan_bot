@@ -86,7 +86,7 @@ class XboxController():
     def __init__(self):
 
         self._power = 0
-        self._steer_power = 0
+        self._steering_power = 0
         self.movement = RobotMovement()
 
         # name of axes and buttons
@@ -126,7 +126,13 @@ class XboxController():
                 self.jsdev = open(fn, 'rb')
                 opened = True
             else:
-                print('No device found. Trying again...')
+                print('No device found. Try again? (y/n): ')
+                try_again = input()
+
+                if (try_again == 'n'):
+                    print('Exiting...')
+                    exit(-1)
+
                 opened = False
                 time.sleep(3)
 
@@ -209,13 +215,79 @@ class XboxController():
 
     def send_axis_data(self, axis):
         if axis == 'gas':
+            prev_power = self._power
+            send_power_data = True
+
             # map ranges from [-1,1] to [0,1]
             self._power = self.remap(self.axis_states[axis],-1,1,0,1)
-            self.movement.apply_power(self._power)
+
+            # Unfortunately, Arduino's do not have support for ROS Actions; therefore,
+            # if we send too many movement commands, the wheels may get out of sync since 
+            # publishers and subscribers are not gauranteed to get all the messages
+            case = lambda x,y: x < self._power <= y
+            
+            if self._power == 0:
+                send_power_data = prev_power != 0
+                self._power = 0
+            elif case(0,0.25):
+                send_power_data = prev_power != 0.25
+                self._power = 0.25
+            elif case(0.25,0.5):
+                send_power_data = prev_power != 0.5
+                self._power = 0.5
+            elif case(0.5,0.75):
+                send_power_data = prev_power != 0.75
+                self._power = 0.75
+            elif case(0.75,1.0):
+                send_power_data = prev_power != 1.0
+                self._power = 1.0
+
+            if send_power_data:
+                self.movement.apply_power(self._power)
 
         elif axis == 'x':
+            prev_steering_power = self._steering_power
+            send_data = True
+
             self._steering_power = self.axis_states[axis]
-            self.movement.apply_steering_power(self._steering_power)
+
+            # Unfortunately, Arduino's do not have support for ROS Actions; therefore,
+            # if we send too many movement commands, the wheels may get out of sync since 
+            # publishers and subscribers are not gauranteed to get all the messages
+            case_pos = lambda x,y: x < self._steering_power <= y
+            case_neg = lambda x,y: x <= self._steering_power < y
+
+            if self._steering_power == 0:
+                send_power_data = prev_steering_power != 0
+                self._steering_power = 0
+            elif case_pos(0,0.25):
+                send_data = prev_steering_power != .25
+                self._steering_power = .25
+            elif case_pos(0.25,0.5):
+                send_data = prev_steering_power != 0.5
+                self._steering_power = 0.5
+            elif case_pos(0.5,0.75):
+                send_data = prev_steering_power != 0.75
+                self._steering_power = 0.75
+            elif case_pos(0.75,1.0):
+                send_data = prev_steering_power != 1.0
+                self._steering_power = 1.0
+            elif case_neg(-0.25,0):
+                send_data = prev_steering_power != -0.25
+                self._steering_power = -0.25
+            elif case_neg(-0.5,-0.25):
+                send_data = prev_steering_power != -0.5
+                self._steering_power = -0.5
+            elif case_neg(-0.75,-0.5):
+                send_data = prev_steering_power != -0.75
+                self._steering_power = -0.75
+            elif case_neg(-1.0,-0.75):
+                send_data = prev_steering_power != -1.0
+                self._steering_power = -1.0
+
+            if send_data:
+                self.movement.apply_steering_power(self._steering_power)
+
 
     def remap(self,old_value,old_min,old_max,new_min,new_max):
         return (((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min

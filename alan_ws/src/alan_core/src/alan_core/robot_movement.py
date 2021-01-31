@@ -54,8 +54,13 @@ class RobotMovement:
             self.publish_left_wheel_command(self.power + self.steering_power)
 
         # steering power < 0 means that power is being applied to right wheel
-        else:
+        elif (steering_power < 0):
             self.publish_right_wheel_command(self.power + self.steering_power)
+
+        else:
+            self.publish_right_wheel_command(self.power)
+            self.publish_left_wheel_command(self.power)
+
 
 
     def move_forward(self):
