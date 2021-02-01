@@ -195,9 +195,10 @@ class XboxController():
                         if value:
                             print("%s pressed" % (button))
 
-                            self.process_button_press(button)
                         else:
                             print("%s released" % (button))
+
+                        self.process_button(button,value)
         
                 if type & 0x02:
                     axis = self.axis_map[number]
@@ -208,10 +209,18 @@ class XboxController():
 
                         self.send_axis_data(axis)
 
-    def process_button_press(self,button):
+    def process_button(self,button,value):
         if button == 'start':
-            print ('shutting down due to pressing START...')
-            self.shutdown()
+            if value:
+                print ('shutting down due to pressing START...')
+                self.shutdown()
+
+        # b will move the robot backwards
+        if button == 'b':
+            if value:
+                self.movement.apply_power(-1.0)
+            else:
+                self.movement.apply_power(0)
 
     def send_axis_data(self, axis):
         if axis == 'gas':
