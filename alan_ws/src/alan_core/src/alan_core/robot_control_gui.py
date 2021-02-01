@@ -59,19 +59,19 @@ class RobotControl():
         self.root.mainloop()
 
     def click_forward(self,event):
-        self.movement.move_forward()
+        self.movement.apply_power(1.0)
 
     def click_left(self,event):
-        self.movement.move_left()
+        self.movement.apply_steering_power(-1.0)
 
     def click_backward(self,event):
-        self.movement.move_backward()
+        self.movement.apply_power(-1.0)
 
     def click_right(self,event):
-        self.movement.move_right()
+        self.movement.apply_steering_power(1.0)
 
     def button_released(self,event):
-        self.movement.stop()
+        self.movement.apply_power(0)
 
     def start_stream(self,event):
         self.stream_button_text.set("Stop Stream")
@@ -112,8 +112,4 @@ class RobotControl():
             self.camera.stop()
             return
 
-
-        
-            
-    
 control = RobotControl()
