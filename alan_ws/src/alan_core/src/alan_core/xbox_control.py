@@ -6,6 +6,7 @@
 
 import os, struct, array
 import time
+from threading import Thread
 from fcntl import ioctl
 from alan_core.robot_movement import RobotMovement
 
@@ -83,27 +84,30 @@ class XboxController():
         0x2c3 : 'dpad_down',
     }
 
-    def __init__(self):
+    def __init__(self,movement):
 
         self._power = 0
         self._steering_power = 0
-        self.movement = RobotMovement()
+        self.movement = movement
 
         # name of axes and buttons
         self.axis_map = []
         self.button_map = []
-
-        self.looping = True
 
         # We'll store the states here.
         self.axis_states = {}
         self.button_states = {}
 
         self.print_available_devices()
+
+    def connect(self):
+
         self.open_device()
         self.print_device_name()
         self.initialize_states()
-        self.loop()
+
+        self.capture_commands = True
+        Thread(target=self.capture_controller_commands,args=()).start()
 
     def print_available_devices(self):
         # Iterate over the joystick devices.
@@ -178,9 +182,8 @@ class XboxController():
         print('%d axes found: %s' % (num_axes, ', '.join(self.axis_map)))
         print('%d buttons found: %s' % (num_buttons, ', '.join(self.button_map)))
 
-    def loop(self):
-        # Main event loop
-        while self.looping:
+    def capture_controller_commands(self):
+        while self.capture_commands:
             evbuf = self.jsdev.read(8)
             if evbuf:
                 time, value, type, number = struct.unpack('IhBB', evbuf)
@@ -302,7 +305,7 @@ class XboxController():
         return (((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min
 
     def shutdown(self):
-        self.looping = False
+        self.capture_commands = False
 
 
 if __name__ == "__main__":

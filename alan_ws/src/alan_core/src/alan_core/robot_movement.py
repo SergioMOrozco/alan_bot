@@ -60,22 +60,16 @@ class RobotMovement:
         # map steering power from [-1,1] to [0,1]
         power = self.remap(abs(steering_power),0,1,0,self.max_steering_power)
 
+        # support for backwards movement
+        if self.power < 0:
+            power *=-1
+
         # steering power > 0 means that power is being applied to left wheel
         if (steering_power > 0) :
-            
-            # support for backwards movement
-            if self.power < 0:
-                power *=-1
-
             self._left_power = self.power + power
 
         # steering power < 0 means that power is being applied to right wheel
         elif (steering_power < 0):
-
-            # support for backwards movement
-            if self.power < 0:
-                power *=-1
-
             self._right_power = self.power + power
 
         else:
@@ -91,7 +85,6 @@ class RobotMovement:
 
     def get_right_power(self):
         return self._right_power
-
 
     def get_left_power(self):
         return self._left_power
