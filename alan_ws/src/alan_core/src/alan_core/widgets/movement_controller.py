@@ -5,7 +5,7 @@ from alan_core.widgets.screen_control_tab import ScreenControlTab
 
 class MovementController(tk.LabelFrame):
     def __init__(self,parent,*args,**kwargs):
-        tk.LabelFrame.__init__(self,parent)
+        tk.LabelFrame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
         # create notebook with two movement control tabs
