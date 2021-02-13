@@ -3,6 +3,7 @@ import tkinter as tk
 from alan_core.widgets.movement_controller import MovementController
 from alan_core.widgets.stream_viewer import StreamViewer 
 import time
+import rospy
 
 
 class RobotControl(tk.Frame):
@@ -27,6 +28,7 @@ class RobotControl(tk.Frame):
         time.sleep(2.0)
 
 if __name__ == "__main__":
+    rospy.init_node("robot_control_gui")
     root = tk.Tk()
     root.geometry("800x600")
     RobotControl(root).pack(side="top",fill="both",expand=True)

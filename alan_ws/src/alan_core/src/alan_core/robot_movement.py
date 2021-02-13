@@ -18,7 +18,6 @@ class RobotMovement:
         self.max_steering_power = max_steering_power
 
         # ros variables
-        rospy.init_node('robot_movement')
         self.right_wheel_pub = rospy.Publisher('wheel_power_right'        ,Float32,queue_size=1)
         self.left_wheel_pub = rospy.Publisher('wheel_power_left'        ,Float32,queue_size=1)
         self.rate = rospy.Rate(10)

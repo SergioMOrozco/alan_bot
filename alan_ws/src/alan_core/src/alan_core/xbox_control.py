@@ -6,6 +6,9 @@
 
 import os, struct, array
 import time
+import rospy
+
+from std_msgs.msg import String
 from threading import Thread
 from fcntl import ioctl
 from alan_core.robot_movement import RobotMovement
@@ -85,6 +88,8 @@ class XboxController():
     }
 
     def __init__(self,movement):
+
+        self.log_pub = rospy.Publisher('controller_logging',String,queue_size=10)
 
         self._power = 0
         self._steering_power = 0
@@ -216,6 +221,9 @@ class XboxController():
         if button == 'start':
             if value:
                 print ('shutting down due to pressing START...')
+                log = ("Shutting_Down_Controller")
+                self.log_pub.publish(log)
+
                 self.shutdown()
 
         # b will move the robot backwards
@@ -255,6 +263,8 @@ class XboxController():
                 self._power = 1.0
 
             if send_power_data:
+                log = ("%s:%.2f" % (axis, self._power))
+                self.log_pub.publish(log)
                 self.movement.apply_power(self._power)
 
         elif axis == 'x':
@@ -298,8 +308,9 @@ class XboxController():
                 self._steering_power = -1.0
 
             if send_data:
+                log = ("%s:%.2f" % (axis, self._steering_power))
+                self.log_pub.publish(log)
                 self.movement.apply_steering_power(self._steering_power)
-
 
     def remap(self,old_value,old_min,old_max,new_min,new_max):
         return (((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min
