@@ -16,5 +16,3 @@ class MovementController(tk.LabelFrame):
         self.notebook.add(self.xbox_control_tab,text="Xbox Control")
 
         self.notebook.pack()
-
-

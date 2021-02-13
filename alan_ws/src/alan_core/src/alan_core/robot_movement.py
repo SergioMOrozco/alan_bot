@@ -7,8 +7,7 @@ from enum import Enum
 
 class RobotMovement:
 
-    ## max_power + max_turn needs to be <= 1.0
-    def __init__(self, max_power = 0.6 , max_steering_power = 0.4):
+    def __init__(self, max_power = 1.0 , max_steering_power = 0.4):
 
         # power variables
         self.power = 0
@@ -63,13 +62,26 @@ class RobotMovement:
         if self.power < 0:
             power *=-1
 
-        # steering power > 0 means that power is being applied to left wheel
+        # steering power > 0 : turn right
         if (steering_power > 0) :
-            self._left_power = self.power + power
 
-        # steering power < 0 means that power is being applied to right wheel
-        elif (steering_power < 0):
-            self._right_power = self.power + power
+            # right wheel may be too slow, if so, increase left instead 
+            if (self.power - power > 0):
+                self._right_power = self.power - power
+            else:
+                # max speed is still 1.0
+                self._left_power = min(self.power + power,1.0)
+
+
+        # steering power < 0 : turn left
+        elif (steering_power < 0 ):
+
+            # left wheel may be too slow, if so, increase right instead 
+            if (self.power - power > 0):
+                self._left_power = self.power - power
+            else:
+                # max speed is still 1.0
+                self._right_power = min(self.power + power,1.0)
 
         else:
             self._left_power = self.power
