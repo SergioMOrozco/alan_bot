@@ -103,57 +103,25 @@ class XboxController():
         self.axis_states = {}
         self.button_states = {}
 
-        self.print_available_devices()
-
     def connect(self):
 
-        self.open_device()
-        self.print_device_name()
-        self.initialize_states()
+        opened = self.open_device()
+        if (opened):
+            self.initialize_states()
 
-        self.capture_commands = True
-        Thread(target=self.capture_controller_commands,args=()).start()
-
-    def print_available_devices(self):
-        # Iterate over the joystick devices.
-        print('Available devices:')
-        
-        for fn in os.listdir('/dev/input'):
-            if fn.startswith('js'):
-                print('  /dev/input/%s' % (fn))
-
+            self.capture_commands = True
+            Thread(target=self.capture_controller_commands,args=()).start()
 
     def open_device(self):
         # Open the joystick device.
         fn = '/dev/input/js0'
-        print('Opening %s...' % fn)
+        self.log_pub.publish('Opening_%s...' % fn)
 
-        opened = False
-
-        while not opened:
-            if os.path.exists(fn):
-                self.jsdev = open(fn, 'rb')
-                opened = True
-            else:
-                print('No device found. Try again? (y/n): ')
-                try_again = input()
-
-                if (try_again == 'n'):
-                    print('Exiting...')
-                    exit(-1)
-
-                opened = False
-                time.sleep(3)
-
-
-    def print_device_name(self):
-        # Get the device name.
-        #buf = bytearray(63)
-        buf = array.array('B', [0] * 64)
-        ioctl(self.jsdev, 0x80006a13 + (0x10000 * len(buf)), buf) # JSIOCGNAME(len)
-        js_name = buf.tobytes().rstrip(b'\x00').decode('utf-8')
-        print('Device name: %s' % js_name)
-
+        if os.path.exists(fn):
+            self.jsdev = open(fn, 'rb')
+            return True
+        else:
+            self.log_pub.publish('No_Device_Found.')
 
     def initialize_states(self):
         # Get number of axes
@@ -183,9 +151,6 @@ class XboxController():
             btn_name = self.button_names.get(btn, 'unknown(0x%03x)' % btn)
             self.button_map.append(btn_name)
             self.button_states[btn_name] = 0
-        
-        print('%d axes found: %s' % (num_axes, ', '.join(self.axis_map)))
-        print('%d buttons found: %s' % (num_buttons, ', '.join(self.button_map)))
 
     def capture_controller_commands(self):
         while self.capture_commands:
@@ -193,18 +158,18 @@ class XboxController():
             if evbuf:
                 time, value, type, number = struct.unpack('IhBB', evbuf)
         
-                if type & 0x80:
-                     print("(initial)", end="")
+                # if type & 0x80:
+                #      print("(initial)", end="")
         
                 if type & 0x01:
                     button = self.button_map[number]
                     if button:
                         self.button_states[button] = value
-                        if value:
-                            print("%s pressed" % (button))
+                        # if value:
+                        #     print("%s pressed" % (button))
 
-                        else:
-                            print("%s released" % (button))
+                        # else:
+                        #     print("%s released" % (button))
 
                         self.process_button(button,value)
         
@@ -213,14 +178,13 @@ class XboxController():
                     if axis:
                         fvalue = value / 32767.0
                         self.axis_states[axis] = fvalue
-                        print("%s: %.3f" % (axis, fvalue))
+                        # print("%s: %.3f" % (axis, fvalue))
 
                         self.send_axis_data(axis)
 
     def process_button(self,button,value):
         if button == 'start':
             if value:
-                print ('shutting down due to pressing START...')
                 log = ("Shutting_Down_Controller")
                 self.log_pub.publish(log)
 
