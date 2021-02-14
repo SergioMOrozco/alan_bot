@@ -1,6 +1,8 @@
 import tkinter as tk
 import cv2
+import os
 import rospy
+from tkinter import filedialog
 from alan_core.pi_video_stream import PiVideoStream
 from PIL import Image,ImageTk
 from std_msgs.msg import Float32
@@ -17,30 +19,24 @@ class StreamViewer(tk.LabelFrame):
         self.is_streaming = False
         self.camera = PiVideoStream()
 
+        self.data_path = ''
 
         # display left hand controls
         self.left_wheel_label = tk.Label(self,text="Left Power: ")
         self.left_wheel_label.grid(row=0,column=0)
 
-        self.left_value_text = tk.StringVar()
-        self.left_value_text.set("N/A")
-        self.left_wheel_value_label = tk.Label(self,textvariable=self.left_value_text)
+        self.left_wheel_value_label = tk.Label(self,text="N/A")
         self.left_wheel_value_label.grid(row=0,column=1)
 
         # allow user to start or stop stream 
-        self.stream_button_text = tk.StringVar()
-        self.stream_button_text.set("Start Steam")
-        self.stream_button= tk.Button(self, textvariable=self.stream_button_text)
+        self.stream_button= tk.Button(self, text="Start Stream", command=self.start_stream)
         self.stream_button.grid(row=0,column=2)
-        self.stream_button.bind('<Button-1>',self.start_stream)
 
         # display right hand controls
         self.right_wheel_label = tk.Label(self,text="Right Power: ")
         self.right_wheel_label.grid(row=0,column=3)
 
-        self.right_value_text = tk.StringVar()
-        self.right_value_text.set("N/A")
-        self.right_wheel_value_label = tk.Label(self,textvariable=self.right_value_text)
+        self.right_wheel_value_label = tk.Label(self,text="N/A")
         self.right_wheel_value_label.grid(row=0,column=4)
 
         self.frame = tk.Frame(self, highlightthickness=1)
@@ -53,15 +49,15 @@ class StreamViewer(tk.LabelFrame):
         self.data_gather_button.grid(row=2,column=2)
 
     def update_left_label(self,value):
-        self.left_value_text.set("%0.2f" % value.data)
+        text = "%0.2f" % value.data
+        self.left_wheel_value_label.configure(text=text)
 
     def update_right_label(self,value):
-        self.right_value_text.set("%0.2f" % value.data)
+        text = "%0.2f" % value.data
+        self.right_wheel_value_label.configure(text=text)
 
-
-    def start_stream(self,event):
-        self.stream_button_text.set("Stop Stream")
-        self.stream_button.bind('<Button-1>',self.stop_stream)
+    def start_stream(self):
+        self.stream_button.configure(text="Stop Stream", command=self.stop_stream)
 
         # allow stream loop to begin
         self.is_streaming = True
@@ -73,9 +69,8 @@ class StreamViewer(tk.LabelFrame):
         # begin streaming
         self.stream()
 
-    def stop_stream(self,event):
-        self.stream_button_text.set("Start Stream")
-        self.stream_button.bind('<Button-1>',self.start_stream)
+    def stop_stream(self):
+        self.stream_button.configure(text="Start Stream", command=self.start_stream)
 
         # stop stream looping
         self.is_streaming = False
@@ -111,5 +106,19 @@ class StreamViewer(tk.LabelFrame):
             return
 
     def gather_data(self):
-        ## begin data gathering
-        pass
+        data_path = filedialog.askdirectory(title='Create Folder')
+
+        # ensure that user input a valid directory path before creating
+        if data_path and not os.path.exists(data_path):
+            os.makedirs(data_path)
+            self.data_path = data_path
+            self.data_gather_button.configure(text="Stop Gather",command=self.stop_gather)
+
+            # code to start data gather
+
+    def stop_gather(self):
+            self.data_path = ''
+            self.data_gather_button.configure(text="Gather Data",command=self.gather_data)
+
+            # code to stop data gather
+
