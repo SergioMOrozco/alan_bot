@@ -7,8 +7,7 @@ from enum import Enum
 
 class RobotMovement:
 
-    ## max_power + max_turn needs to be <= 1.0
-    def __init__(self, max_power = 0.6 , max_steering_power = 0.4):
+    def __init__(self, max_power = 1.0 , max_steering_power = 0.4):
 
         # power variables
         self.power = 0
@@ -18,7 +17,6 @@ class RobotMovement:
         self.max_steering_power = max_steering_power
 
         # ros variables
-        rospy.init_node('robot_movement')
         self.right_wheel_pub = rospy.Publisher('wheel_power_right'        ,Float32,queue_size=1)
         self.left_wheel_pub = rospy.Publisher('wheel_power_left'        ,Float32,queue_size=1)
         self.rate = rospy.Rate(10)
@@ -60,23 +58,30 @@ class RobotMovement:
         # map steering power from [-1,1] to [0,1]
         power = self.remap(abs(steering_power),0,1,0,self.max_steering_power)
 
-        # steering power > 0 means that power is being applied to left wheel
+        # support for backwards movement
+        if self.power < 0:
+            power *=-1
+
+        # steering power > 0 : turn right
         if (steering_power > 0) :
-            
-            # support for backwards movement
-            if self.power < 0:
-                power *=-1
 
-            self._left_power = self.power + power
+            # right wheel may be too slow, if so, increase left instead 
+            if (self.power - power > 0):
+                self._right_power = self.power - power
+            else:
+                # max speed is still 1.0
+                self._left_power = min(self.power + power,1.0)
 
-        # steering power < 0 means that power is being applied to right wheel
-        elif (steering_power < 0):
 
-            # support for backwards movement
-            if self.power < 0:
-                power *=-1
+        # steering power < 0 : turn left
+        elif (steering_power < 0 ):
 
-            self._right_power = self.power + power
+            # left wheel may be too slow, if so, increase right instead 
+            if (self.power - power > 0):
+                self._left_power = self.power - power
+            else:
+                # max speed is still 1.0
+                self._right_power = min(self.power + power,1.0)
 
         else:
             self._left_power = self.power
@@ -91,7 +96,6 @@ class RobotMovement:
 
     def get_right_power(self):
         return self._right_power
-
 
     def get_left_power(self):
         return self._left_power
