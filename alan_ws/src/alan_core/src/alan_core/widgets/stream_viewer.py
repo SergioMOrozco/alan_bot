@@ -26,7 +26,7 @@ class StreamViewer(tk.LabelFrame):
         self.left_wheel_label = tk.Label(self,text="Left Power: ")
         self.left_wheel_label.grid(row=0,column=0)
 
-        self.left_wheel_value_label = tk.Label(self,text="N/A")
+        self.left_wheel_value_label = tk.Label(self,text="0.00")
         self.left_wheel_value_label.grid(row=0,column=1)
 
         # allow user to start or stop stream 
@@ -37,7 +37,7 @@ class StreamViewer(tk.LabelFrame):
         self.right_wheel_label = tk.Label(self,text="Right Power: ")
         self.right_wheel_label.grid(row=0,column=3)
 
-        self.right_wheel_value_label = tk.Label(self,text="N/A")
+        self.right_wheel_value_label = tk.Label(self,text="0.00")
         self.right_wheel_value_label.grid(row=0,column=4)
 
         self.frame = tk.Frame(self, highlightthickness=1)
@@ -82,6 +82,9 @@ class StreamViewer(tk.LabelFrame):
         if (self.camera.stopped):
             self.camera.start()
 
+        if gather_data:
+            self.label_file = open(self.data_path + '/labels.txt', 'w')
+
         # begin streaming
         self.stream(display,gather_data)
 
@@ -91,6 +94,8 @@ class StreamViewer(tk.LabelFrame):
 
         # stop camera
         self.camera.stop()
+
+        self.label_file.close()
 
         # reset image counter for next data gather
         self.image_counter = 0
@@ -116,6 +121,7 @@ class StreamViewer(tk.LabelFrame):
                 self.label.image =frame
 
             if gather_data:
+                self.label_file.write(self.left_wheel_value_label['text'] + ',' + self.right_wheel_value_label['text'] + '\n')
                 cv2.imwrite(self.data_path + '/' + f'{self.image_counter}' + '.jpg',frame)
                 self.image_counter += 1
             
@@ -124,6 +130,9 @@ class StreamViewer(tk.LabelFrame):
 
         except:
             self.camera.stop()
+
+            if (gather_data):
+                self.label_file.close()
             return
 
     def gather_data(self):
