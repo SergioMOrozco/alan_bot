@@ -20,6 +20,8 @@ class StreamViewer(tk.LabelFrame):
         self.is_streaming = False
         self.camera = PiVideoStream()
 
+        self.label_file = None
+
         self.data_path = ''
 
         # display left hand controls
@@ -92,10 +94,8 @@ class StreamViewer(tk.LabelFrame):
         # stop stream looping
         self.is_streaming = False
 
-        # stop camera
-        self.camera.stop()
-
-        self.label_file.close()
+        if (not (self.label_file is None)):
+            self.label_file.close()
 
         # reset image counter for next data gather
         self.image_counter = 0
@@ -131,7 +131,7 @@ class StreamViewer(tk.LabelFrame):
         except:
             self.camera.stop()
 
-            if (gather_data):
+            if (not (self.label_file is None)):
                 self.label_file.close()
             return
 
