@@ -1,8 +1,10 @@
-/alan_controllers/alan_wheels/build/
-/alan_ws/build/
-/alan_ws/devel/
+alan_controllers/alan_wheels/build/
 
-/alan_ws/.catkin_workspace
+alan_ws/build/
+alan_ws/devel/
+alan_ws/.catkin_workspace
+
+data_processing/road_data/
 
 *.pyc
 !**/__pycache__/
