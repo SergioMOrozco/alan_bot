@@ -8,18 +8,33 @@ class DataCleaner:
         self.scale = 60
 
     def clean(self, search_directory):
+
+        if not self.confirm_clean(search_directory):
+            print("No changes written.")
+            return
+
+        self.clean_directory(search_directory)
+
+        print(".jpg files in {} cleaned.".format(search_directory))
+
+    def clean_directory(self, search_directory):
+        # find all .jpg files within a given folder
         for component in os.listdir(search_directory):
             path = search_directory + component
-            if os.path.isdir(path):
 
-                self.clean(path + "/")
+            # recursively find .jpg files in sub directories
+            if os.path.isdir(path):
+                self.clean_directory(path + "/")
 
             elif component.endswith(".jpg"):
 
                 clean = self.clean_image(path)
 
+                # show image to user
                 cv2.imshow("image", clean)
                 cv2.waitKey(30)
+
+                cv2.imwrite(path, clean)
 
     def clean_image(self, image_path):
         image = cv2.imread(image_path)
@@ -44,6 +59,19 @@ class DataCleaner:
         region = self.region_of_interest(canny)
 
         return region
+
+    def confirm_clean(self, search_directory):
+
+        val = input(
+            "Are you sure you want to overwrite the contents in {} - (y)es or (n)o ? :".format(
+                search_directory
+            )
+        )
+
+        if val == "n" or val == "y":
+            return val == "y"
+
+        return False
 
     def region_of_interest(self, img):
 
@@ -85,6 +113,10 @@ class DataCleaner:
         return cv2.resize(image, (width, height))
 
 
-clean = DataCleaner()
-clean.clean("/home/sorozco0612/dev/alan_bot/data_processing/")
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    clean = DataCleaner()
+    directory = input(
+        "Please input a directory containg .jpg files that you would like cleaned: "
+    )
+    clean.clean(directory)
+    cv2.destroyAllWindows()
