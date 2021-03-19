@@ -3,43 +3,76 @@ import os
 import numpy as np
 
 
-class DataCleaner:
+class ImageManager:
     def __init__(self):
-        self.scale = 60
+        self.features = []
+        self.labels = []
 
-    def clean(self, search_directory):
+    def start_menu(self):
 
-        if not self.confirm_clean(search_directory):
-            print("No changes written.")
-            return
+        directory = input(
+            "Please input a directory containg .jpg files that you would like cleaned and made into a dataset: "
+        )
+        self.create_dataset(directory)
+        self.save_dataset(directory)
+        self.mini_test(directory)
 
-        self.clean_directory(search_directory)
+    def mini_test(self, directory):
+        features = np.load(os.path.join(directory, "features.npy"))
+        labels = np.load(os.path.join(directory, "labels.npy"))
 
-        print(".jpg files in {} cleaned.".format(search_directory))
+        cv2.imshow("image", features[0].reshape(33, 47, 1))
+        print(labels[0])
+        cv2.waitKey(1000)
 
-    def clean_directory(self, search_directory):
+    def create_dataset(self, search_directory):
+
+        label_file = None
+
+        # get label file
+        if os.path.exists(search_directory + "labels.txt"):
+            label_file = open(search_directory + "labels.txt")
+            labels = label_file.readlines()
+
         # find all .jpg files within a given folder
         for component in os.listdir(search_directory):
+
             path = search_directory + component
 
             # recursively find .jpg files in sub directories
             if os.path.isdir(path):
-                self.clean_directory(path + "/")
+                self.create_dataset(path + "/")
 
             elif component.endswith(".jpg"):
 
-                clean = self.clean_image(path)
+                clean = ImageManager.clean_image(path)
 
                 # show image to user
                 cv2.imshow("image", clean)
                 cv2.waitKey(30)
 
-                cv2.imwrite(path, clean)
+                # input cleaned image into dataset
+                self.features.append([clean])
 
-    def clean_image(self, image_path):
+                if label_file:
+
+                    # get label from file
+                    label = labels[int(component.strip(".jpg"))]
+                    label = label.strip("\n")
+                    label = label.split(",")
+
+                    # store label into dataset
+                    self.labels.append([label[0], label[1]])
+
+    def save_dataset(self, directory):
+        np.save(os.path.join(directory, "features"), np.array(self.features))
+        np.save(os.path.join(directory, "labels"), np.array(self.labels))
+
+    @staticmethod
+    def clean_image(image_path):
         image = cv2.imread(image_path)
 
-        scaled = self.scale_image(image)
+        scaled = ImageManager.scale_image(image)
 
         # HSV provides more color contrast with yellow lines.
         # It was alot easier to isolate the yellow lines in HSV than in BGR
@@ -56,24 +89,12 @@ class DataCleaner:
         # edge detection
         canny = cv2.Canny(hsv_blur, 246, 255)
 
-        region = self.region_of_interest(canny)
+        region = ImageManager.region_of_interest(canny)
 
         return region
 
-    def confirm_clean(self, search_directory):
-
-        val = input(
-            "Are you sure you want to overwrite the contents in {} - (y)es or (n)o ? :".format(
-                search_directory
-            )
-        )
-
-        if val == "n" or val == "y":
-            return val == "y"
-
-        return False
-
-    def region_of_interest(self, img):
+    @staticmethod
+    def region_of_interest(img):
 
         height, width = img.shape
 
@@ -103,20 +124,21 @@ class DataCleaner:
         # only take pixels where both the mask and image are white
         return cv2.bitwise_and(img, mask)
 
-    def scale_image(self, image):
+    @staticmethod
+    def scale_image(image, scale=60):
+
+        if scale == 100:
+            return image
 
         # calculate the 50 percent of original dimensions
-        width = int(image.shape[1] * self.scale / 100)
-        height = int(image.shape[0] * self.scale / 100)
+        width = int(image.shape[1] * scale / 100)
+        height = int(image.shape[0] * scale / 100)
 
         # resize image
         return cv2.resize(image, (width, height))
 
 
 if __name__ == "__main__":
-    clean = DataCleaner()
-    directory = input(
-        "Please input a directory containg .jpg files that you would like cleaned: "
-    )
-    clean.clean(directory)
+    manager = ImageManager()
+    manager.start_menu()
     cv2.destroyAllWindows()
