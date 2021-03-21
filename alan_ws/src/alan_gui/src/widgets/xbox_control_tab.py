@@ -1,14 +1,14 @@
 import tkinter as tk
 from alan_core.xbox_control import XboxController
-from alan_core.robot_movement import RobotMovement
-from alan_core.widgets.controller_log import ControllerLog
+from alan_core.movement_control import MovementControl 
+from widgets.controller_log import ControllerLog
 
 class XboxControlTab(tk.Frame):
     def __init__(self,parent,*args,**kwargs):
         tk.Frame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
-        self.movement = RobotMovement()
+        self.movement = MovementControl()
 
         # create xbox controller 
         self.xbox_controller = XboxController(self.movement)

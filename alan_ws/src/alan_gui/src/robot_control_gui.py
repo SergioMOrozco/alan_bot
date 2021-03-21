@@ -1,7 +1,7 @@
 #! /home/sorozco/computer_vision/bin/python3
 import tkinter as tk
-from alan_core.widgets.movement_controller import MovementController
-from alan_core.widgets.stream_viewer import StreamViewer 
+from widgets.movement_controller import MovementController
+from widgets.stream_viewer import StreamViewer 
 import time
 import rospy
 

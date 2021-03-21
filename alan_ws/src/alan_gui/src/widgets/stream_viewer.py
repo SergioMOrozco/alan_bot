@@ -3,7 +3,7 @@ import cv2
 import os
 import rospy
 from tkinter import filedialog
-from alan_core.pi_video_stream import PiVideoStream
+from alan_core.camera_control import CameraControl 
 from PIL import Image,ImageTk
 from std_msgs.msg import Float32
 
@@ -18,7 +18,7 @@ class StreamViewer(tk.LabelFrame):
         self.image_counter = 0
 
         self.is_streaming = False
-        self.camera = PiVideoStream()
+        self.camera = CameraControl()
 
         self.label_file = None
 

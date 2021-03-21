@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
-from alan_core.widgets.xbox_control_tab import XboxControlTab
-from alan_core.widgets.screen_control_tab import ScreenControlTab
+from widgets.xbox_control_tab import XboxControlTab
+from widgets.screen_control_tab import ScreenControlTab
 
 class MovementController(tk.LabelFrame):
     def __init__(self,parent,*args,**kwargs):
