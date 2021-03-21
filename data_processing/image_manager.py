@@ -21,7 +21,7 @@ class ImageManager:
         features = np.load(os.path.join(directory, "features.npy"))
         labels = np.load(os.path.join(directory, "labels.npy"))
 
-        cv2.imshow("image", features[0].reshape(33, 47, 1))
+        cv2.imshow("image", features[0])
         print(labels[0])
         cv2.waitKey(1000)
 
@@ -47,19 +47,19 @@ class ImageManager:
 
                 clean = ImageManager.clean_image(path)
 
-                # show image to user
-                cv2.imshow("image", clean)
-                cv2.waitKey(30)
-
-                # input cleaned image into dataset
-                self.features.append([clean])
-
                 if label_file:
+                    # show image to user
+                    cv2.imshow("image", clean)
+                    cv2.waitKey(30)
+
+                    # input cleaned image into dataset
+                    self.features.append(clean)
 
                     # get label from file
                     label = labels[int(component.strip(".jpg"))]
                     label = label.strip("\n")
                     label = label.split(",")
+                    label = [float(item) for item in label]
 
                     # store label into dataset
                     self.labels.append([label[0], label[1]])
@@ -90,6 +90,9 @@ class ImageManager:
         canny = cv2.Canny(hsv_blur, 246, 255)
 
         region = ImageManager.region_of_interest(canny)
+
+        # give single color channel. Needed for 2DConv
+        region = region.reshape(list(region.shape) + [1])
 
         return region
 
