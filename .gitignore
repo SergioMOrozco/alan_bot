@@ -5,6 +5,7 @@ alan_ws/devel/
 alan_ws/.catkin_workspace
 
 data_processing/road_data/
+model_creation/.ipynb_checkpoints/
 
 *.pyc
 !**/__pycache__/
