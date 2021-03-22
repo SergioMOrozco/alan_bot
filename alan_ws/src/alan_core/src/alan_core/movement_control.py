@@ -14,63 +14,49 @@ class Robot:
 
         # power variables
         self._power = 0
-        self.max_power = 1
-        self.max_steering_power = 0.4
 
     def apply_power(self, power):
-        if (not (0 <= power <= 1)):
-            print("power must be between a range of 0 and 1")
-            return
-        # map power from [0,1] to [0,max_power]
-        self._power = self.remap(abs(power), 0, 1, 0, self.max_power)
-
-        ## suppport for backwards movement
-        if power < 0:
-            self._power *= -1
+        self._power = min(max(-1,power),1)
 
         self._movement_control.set_speed(self._power,self._power)
 
     def apply_steering_power(self, steering_power):
-        if (not (-1 <= steering_power <= 1)):
-            print("steering power must be between a range of -1 and 1")
-            return
-
-        steering_power = self.remap(abs(steering_power),-1,1,-self.max_steering_power,self.max_steering_power)
-
-        # support for backwards movement
-        # TODO: redo this logic
-        if self._power < 0:
-            power *= -1
+        steering_power = min(max(-1,steering_power),1)
 
         right_power = self._power
         left_power = self._power
 
-        # steering power > 0 : turn left
-        if steering_power > 0:
+
+        is_positive = self._power >= 0
+
+        # turn right
+        if (steering_power > 0):
 
             # right wheel may be too slow, if so, increase left instead
-            if self._power - abs(steering_power) > 0:
-                right_power -= abs(steering_power)
-            else:
-                # max speed is still 100
-                left_power = min(self._power + abs(steering_power), 1)
+            if abs(self._power) - abs(steering_power) >= 0:
 
-        # steering power < 0 : turn right
-        elif steering_power < 0:
+                # decrease right power
+                right_power = self._power - steering_power if is_positive else self._power + steering_power
+            else:
+
+                #increase left power
+                left_power = self._power + steering_power if is_positive else self._power - steering_power
+
+        # turn left
+        else:
 
             # left wheel may be too slow, if so, increase right instead
-            if self._power - abs(steering_power) > 0:
-                left_power -= abs(steering_power)
+            if abs(self._power) - abs(steering_power) >= 0:
+
+                #decrease left power
+                left_power = self._power + steering_power if is_positive else self._power - steering_power
             else:
-                # max speed is still 100
-                right_power = min(self._power + abs(steering_power), 1)
+
+                #increase right power
+                right_power = self._power - steering_power if is_positive else self._power + steering_power
 
         self._movement_control.set_speed(left_power,right_power)
 
-    def remap(self, old_value, old_min, old_max, new_min, new_max):
-        return (
-            ((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)
-        ) + new_min
 
 
 ## if you dont cleanup, you might run into the issue of Runtime error:Failed to add edge detection
@@ -144,6 +130,20 @@ class MovementControl:
         self._left_wheel = Motor(LEFT_PWM,LEFT_FR,LEFT_ENCODER)
         self._right_wheel = Motor(RIGHT_PWM,RIGHT_FR,RIGHT_ENCODER)
 
+    # should be a value between [-1,1]
     def set_speed(self,left_speed,right_speed):
+
+        left_speed = min(max(-1,left_speed),1)
+        right_speed= min(max(-1,right_speed),1)
+
+        #convert to pwm
+        left_speed = self.remap(left_speed,-1,1,-100,100)
+        right_speed = self.remap(right_speed,-1,1,-100,100)
+
         self._left_wheel.set_speed(left_speed)
         self._right_wheel.set_speed(right_speed)
+
+    def remap(self, old_value, old_min, old_max, new_min, new_max):
+        return (
+            ((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)
+        ) + new_min

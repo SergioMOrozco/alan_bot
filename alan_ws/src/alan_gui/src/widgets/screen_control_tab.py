@@ -2,11 +2,11 @@ import tkinter as tk
 from alan_core.movement_control import Robot
 
 class ScreenControlTab(tk.Frame):
-    def __init__(self,parent,*args,**kwargs):
+    def __init__(self,parent,robot,*args,**kwargs):
         tk.Frame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
-        self.movement = Robot()
+        self._robot = robot
 
         ## on screen movement controls
         self.forward_button= tk.Button(self, text="W", anchor=tk.N, padx=70, pady=70)
@@ -33,17 +33,17 @@ class ScreenControlTab(tk.Frame):
         self.right_button.bind('<ButtonRelease-1>',self.button_released)
 
     def click_forward(self,event):
-        self.movement.apply_power(1.0)
+        self._robot.apply_power(1.0)
 
     def click_left(self,event):
-        self.movement.apply_steering_power(-1.0)
+        self._robot.apply_steering_power(-1.0)
 
     def click_backward(self,event):
-        self.movement.apply_power(-1.0)
+        self._robot.apply_power(-1.0)
 
     def click_right(self,event):
-        self.movement.apply_steering_power(1.0)
+        self._robot.apply_steering_power(1.0)
 
     def button_released(self,event):
-        self.movement.apply_power(0)
+        self._robot.apply_power(0)
 

@@ -11,7 +11,7 @@ import rospy
 from std_msgs.msg import String
 from threading import Thread
 from fcntl import ioctl
-from alan_core.movement_control import MovementControl 
+from alan_core.movement_control import Robot 
 
 class XboxController():
 
@@ -87,13 +87,13 @@ class XboxController():
         0x2c3 : 'dpad_down',
     }
 
-    def __init__(self,movement):
+    def __init__(self,robot):
 
         self.log_pub = rospy.Publisher('controller_logging',String,queue_size=10)
 
         self._power = 0
         self._steering_power = 0
-        self.movement = movement
+        self._robot = robot 
 
         # name of axes and buttons
         self.axis_map = []
@@ -193,88 +193,27 @@ class XboxController():
         # b will move the robot backwards
         if button == 'b':
             if value:
-                self.movement.apply_power(-1.0)
+                self._robot.apply_power(-1.0)
             else:
-                self.movement.apply_power(0)
+                self._robot.apply_power(0)
 
     def send_axis_data(self, axis):
         if axis == 'gas':
-            prev_power = self._power
-            send_power_data = True
 
             # map ranges from [-1,1] to [0,1]
             self._power = self.remap(self.axis_states[axis],-1,1,0,1)
 
-            # Unfortunately, Arduino's do not have support for ROS Actions; therefore,
-            # if we send too many movement commands, the wheels may get out of sync since 
-            # publishers and subscribers are not gauranteed to get all the messages
-            case = lambda x,y: x < self._power <= y
-            
-            if self._power == 0:
-                send_power_data = prev_power != 0
-                self._power = 0
-            elif case(0,0.25):
-                send_power_data = prev_power != 0.25
-                self._power = 0.25
-            elif case(0.25,0.5):
-                send_power_data = prev_power != 0.5
-                self._power = 0.5
-            elif case(0.5,0.75):
-                send_power_data = prev_power != 0.75
-                self._power = 0.75
-            elif case(0.75,1.0):
-                send_power_data = prev_power != 1.0
-                self._power = 1.0
-
-            if send_power_data:
-                log = ("%s:%.2f" % (axis, self._power))
-                self.log_pub.publish(log)
-                self.movement.apply_power(self._power)
+            log = ("%s:%.2f" % (axis, self._power))
+            self.log_pub.publish(log)
+            self._robot.apply_power(self._power)
 
         elif axis == 'x':
-            prev_steering_power = self._steering_power
-            send_data = True
 
             self._steering_power = self.axis_states[axis]
 
-            # Unfortunately, Arduino's do not have support for ROS Actions; therefore,
-            # if we send too many movement commands, the wheels may get out of sync since 
-            # publishers and subscribers are not gauranteed to get all the messages
-            case_pos = lambda x,y: x < self._steering_power <= y
-            case_neg = lambda x,y: x <= self._steering_power < y
-
-            if self._steering_power == 0:
-                send_power_data = prev_steering_power != 0
-                self._steering_power = 0
-            elif case_pos(0,0.25):
-                send_data = prev_steering_power != .25
-                self._steering_power = .25
-            elif case_pos(0.25,0.5):
-                send_data = prev_steering_power != 0.5
-                self._steering_power = 0.5
-            elif case_pos(0.5,0.75):
-                send_data = prev_steering_power != 0.75
-                self._steering_power = 0.75
-            elif case_pos(0.75,1.0):
-                send_data = prev_steering_power != 1.0
-                self._steering_power = 1.0
-            elif case_neg(-0.25,0):
-                send_data = prev_steering_power != -0.25
-                self._steering_power = -0.25
-            elif case_neg(-0.5,-0.25):
-                send_data = prev_steering_power != -0.5
-                self._steering_power = -0.5
-            elif case_neg(-0.75,-0.5):
-                send_data = prev_steering_power != -0.75
-                self._steering_power = -0.75
-            elif case_neg(-1.0,-0.75):
-                send_data = prev_steering_power != -1.0
-                self._steering_power = -1.0
-
-            if send_data:
-                log = ("%s:%.2f" % (axis, self._steering_power))
-                self.log_pub.publish(log)
-                self.movement.apply_steering_power(self._steering_power)
+            log = ("%s:%.2f" % (axis, self._steering_power))
+            self.log_pub.publish(log)
+            self._robot.apply_steering_power(self._steering_power)
 
     def remap(self,old_value,old_min,old_max,new_min,new_max):
         return (((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)) + new_min

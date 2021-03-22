@@ -2,6 +2,7 @@
 import tkinter as tk
 from widgets.movement_controller import MovementController
 from widgets.stream_viewer import StreamViewer 
+from alan_core.movement_control import Robot
 import time
 import rospy
 
@@ -11,8 +12,10 @@ class RobotControl(tk.Frame):
         tk.Frame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
+        self._robot = Robot()
+
         # Notebook which allows the user to control the robot in multiple ways
-        self.movement_controller = MovementController(self,text="Movement")
+        self.movement_controller = MovementController(self,self._robot,text="Movement")
         self.movement_controller.grid(row=0,column=0,rowspan=2)
 
         # Title of application
