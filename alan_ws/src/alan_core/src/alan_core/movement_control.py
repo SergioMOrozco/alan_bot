@@ -1,14 +1,16 @@
 #! /home/sorozco/computer_vision/bin/python3
 import rospy
+import time
+import RPi.GPIO as GPIO
+from gpiozero import Robot, DigitalInputDevice
 from std_msgs.msg import Float32
-
-# from pynput.keyboard import Key, Listener
-# from pynput import keyboard
 from enum import Enum
 
 
-class MovementControl:
-    def __init__(self, max_power=1.0, max_steering_power=0.4):
+class Robot:
+
+    def __init__(self):
+        self._movement_control = MovementControl()
 
         # power variables
         self.power = 0
@@ -16,31 +18,6 @@ class MovementControl:
         self._left_power = 0
         self.max_power = max_power
         self.max_steering_power = max_steering_power
-
-        # ros variables
-        self.right_wheel_pub = rospy.Publisher(
-            "wheel_power_right", Float32, queue_size=1
-        )
-        self.left_wheel_pub = rospy.Publisher("wheel_power_left", Float32, queue_size=1)
-        self.rate = rospy.Rate(10)
-
-    def publish_left_wheel_command(self):
-        while not rospy.is_shutdown():
-            connections = self.left_wheel_pub.get_num_connections()
-            if connections > 0:
-                self.left_wheel_pub.publish(Float32(self._left_power))
-                break
-            else:
-                self.rate.sleep()
-
-    def publish_right_wheel_command(self):
-        while not rospy.is_shutdown():
-            connections = self.right_wheel_pub.get_num_connections()
-            if connections > 0:
-                self.right_wheel_pub.publish(Float32(self._right_power))
-                break
-            else:
-                self.rate.sleep()
 
     def apply_power(self, power):
         # map power from [0,1] to [0,max_power]
@@ -101,3 +78,135 @@ class MovementControl:
 
     def get_left_power(self):
         return self._left_power
+
+
+## if you dont cleanup, you might run into the issue of Runtime error:Failed to add edge detection
+#GPIO.cleanup()
+
+
+
+
+
+#try:
+#    for i in range(10):
+#        p.ChangeDutyCycle(i)
+#        time.sleep(0.02)
+#    for i in range(10):
+#        p.ChangeDutyCycle(10 - i)
+#        time.sleep(0.02)
+#
+#    GPIO.output(left_fr,GPIO.HIGH)
+#
+#    for i in range(101):
+#        p.ChangeDutyCycle(100 - i)
+#        time.sleep(0.02)
+#    for i in range(101):
+#        p.ChangeDutyCycle(i)
+#        time.sleep(0.02)
+#
+#    p.ChangeDutyCycle(0)
+#    GPIO.output(left_fr,GPIO.LOW)
+#
+#    for i in range(101):
+#        q.ChangeDutyCycle(i)
+#        time.sleep(0.02)
+#    for i in range(101):
+#        q.ChangeDutyCycle(100 - i)
+#        time.sleep(0.02)
+#
+#    GPIO.output(right_fr,GPIO.HIGH)
+#
+#    for i in range(101):
+#        q.ChangeDutyCycle(100 - i)
+#        time.sleep(0.02)
+#    for i in range(101):
+#        q.ChangeDutyCycle(i)
+#        time.sleep(0.02)
+#
+#    q.ChangeDutyCycle(0)
+#    GPIO.output(right_fr,GPIO.LOW)
+#
+#except KeyboardInterrupt:
+#    pass
+
+class Encoder:
+
+    def __init__(self,pin):
+        GPIO.setmode(GPIO.BCM)
+        self._pin = pin
+        self._value = 0
+
+        #setup pins
+        GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(pin,GPIO.RISING,callback=self._increment)
+
+    def _increment(self,garbage):
+        self._value += 1
+
+    def reset(self):
+        self._value = 0
+
+    @property
+    def value(self):
+        return self._value
+
+class Motor:
+    def __init__(self,pwm_pin,fr_pin,encoder_pin):
+
+        GPIO.setmode(GPIO.BCM)
+
+        self._fr_pin = fr_pin
+        self._pwm_pin = pwm_pin
+        self._encoder_pin = encoder_pin
+
+        #setup encoder for feedback loop
+        self._encoder = Encoder(encoder_pin)
+
+        #setup pins
+        GPIO.setup(self._fr_pin,GPIO.OUT)
+        GPIO.setup(self._pwm_pin,GPIO.OUT)
+
+        #setup pwm for motor speed control
+        self._pwm =GPIO.PWM(self._pwm_pin,50) 
+
+        # motor starts idle
+        self._pwm.start(0)
+        GPIO.output(self._fr_pin,GPIO.LOW)
+
+    @speed.setter
+    def speed(self,value):
+        if (value >= 0):
+            GPIO.output(self._fr_pin,GPIO.LOW)
+            self._pwm.ChangeDutyCycle(value)
+        else:
+            GPIO.output(self._fr_pin,GPIO.HIGH)
+            self._pwm.ChangeDutyCycle(100 - value)
+
+
+class MovementControl:
+
+    LEFT_PWM = 2
+    LEFT_FR = 3
+    RIGHT_PWM = 4
+    RIGHT_FR = 14
+
+
+    RIGHT_ENCODER = 15
+    LEFT_ENCODER = 18
+    def __init__(self):
+
+        self._left_wheel = Motor(LEFT_PWM,LEFT_FR,LEFT_ENCODER)
+        self._right_wheel = Motor(RIGHT_PWM,RIGHT_FR,RIGHT_ENCODER)
+
+    def value(self,speed):
+        if type(speed) is tuple and len(speed) == 2:
+            self.left_wheel.speed = speed[0]
+
+
+
+
+
+
+
+
+
