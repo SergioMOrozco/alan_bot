@@ -8,10 +8,10 @@ class XboxControlTab(tk.Frame):
         tk.Frame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
-        self.movement = MovementControl()
+        #self.movement = MovementControl()
 
         # create xbox controller 
-        self.xbox_controller = XboxController(self.movement)
+        #self.xbox_controller = XboxController(self.movement)
 
         # button to connect controller
         self.connect_button= tk.Button(self, text="Connect Controlller")
@@ -23,7 +23,8 @@ class XboxControlTab(tk.Frame):
         self.logging_frame.pack()
 
     def connect_controller(self,event):
-        self.xbox_controller.connect()
+        pass
+        #self.xbox_controller.connect()
 
 
 

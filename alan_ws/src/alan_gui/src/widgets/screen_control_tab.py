@@ -1,12 +1,12 @@
 import tkinter as tk
-from alan_core.movement_control import MovementControl 
+from alan_core.movement_control import Robot
 
 class ScreenControlTab(tk.Frame):
     def __init__(self,parent,*args,**kwargs):
         tk.Frame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
-        self.movement = MovementControl()
+        self.movement = Robot()
 
         ## on screen movement controls
         self.forward_button= tk.Button(self, text="W", anchor=tk.N, padx=70, pady=70)

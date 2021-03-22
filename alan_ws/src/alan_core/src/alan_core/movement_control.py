@@ -13,121 +13,68 @@ class Robot:
         self._movement_control = MovementControl()
 
         # power variables
-        self.power = 0
-        self._right_power = 0
-        self._left_power = 0
-        self.max_power = max_power
-        self.max_steering_power = max_steering_power
+        self._power = 0
+        self.max_power = 1
+        self.max_steering_power = 0.4
 
     def apply_power(self, power):
+        if (not (0 <= power <= 1)):
+            print("power must be between a range of 0 and 1")
+            return
         # map power from [0,1] to [0,max_power]
-        self.power = self.remap(abs(power), 0, 1, 0, self.max_power)
+        self._power = self.remap(abs(power), 0, 1, 0, self.max_power)
 
         ## suppport for backwards movement
         if power < 0:
-            self.power *= -1
+            self._power *= -1
 
-        self._right_power = self.power
-        self._left_power = self.power
-
-        self.publish_left_wheel_command()
-        self.publish_right_wheel_command()
+        self._movement_control.set_speed(self._power,self._power)
 
     def apply_steering_power(self, steering_power):
-        # map steering power from [-1,1] to [0,1]
-        power = self.remap(abs(steering_power), 0, 1, 0, self.max_steering_power)
+        if (not (-1 <= steering_power <= 1)):
+            print("steering power must be between a range of -1 and 1")
+            return
+
+        steering_power = self.remap(abs(steering_power),-1,1,-self.max_steering_power,self.max_steering_power)
 
         # support for backwards movement
-        if self.power < 0:
+        # TODO: redo this logic
+        if self._power < 0:
             power *= -1
 
-        # steering power > 0 : turn right
+        right_power = self._power
+        left_power = self._power
+
+        # steering power > 0 : turn left
         if steering_power > 0:
 
             # right wheel may be too slow, if so, increase left instead
-            if self.power - power > 0:
-                self._right_power = self.power - power
+            if self._power - abs(steering_power) > 0:
+                right_power -= abs(steering_power)
             else:
-                # max speed is still 1.0
-                self._left_power = min(self.power + power, 1.0)
+                # max speed is still 100
+                left_power = min(self._power + abs(steering_power), 1)
 
-        # steering power < 0 : turn left
+        # steering power < 0 : turn right
         elif steering_power < 0:
 
             # left wheel may be too slow, if so, increase right instead
-            if self.power - power > 0:
-                self._left_power = self.power - power
+            if self._power - abs(steering_power) > 0:
+                left_power -= abs(steering_power)
             else:
-                # max speed is still 1.0
-                self._right_power = min(self.power + power, 1.0)
+                # max speed is still 100
+                right_power = min(self._power + abs(steering_power), 1)
 
-        else:
-            self._left_power = self.power
-            self._right_power = self.power
-
-        self.publish_right_wheel_command()
-        self.publish_left_wheel_command()
+        self._movement_control.set_speed(left_power,right_power)
 
     def remap(self, old_value, old_min, old_max, new_min, new_max):
         return (
             ((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)
         ) + new_min
 
-    def get_right_power(self):
-        return self._right_power
-
-    def get_left_power(self):
-        return self._left_power
-
 
 ## if you dont cleanup, you might run into the issue of Runtime error:Failed to add edge detection
 #GPIO.cleanup()
-
-
-
-
-
-#try:
-#    for i in range(10):
-#        p.ChangeDutyCycle(i)
-#        time.sleep(0.02)
-#    for i in range(10):
-#        p.ChangeDutyCycle(10 - i)
-#        time.sleep(0.02)
-#
-#    GPIO.output(left_fr,GPIO.HIGH)
-#
-#    for i in range(101):
-#        p.ChangeDutyCycle(100 - i)
-#        time.sleep(0.02)
-#    for i in range(101):
-#        p.ChangeDutyCycle(i)
-#        time.sleep(0.02)
-#
-#    p.ChangeDutyCycle(0)
-#    GPIO.output(left_fr,GPIO.LOW)
-#
-#    for i in range(101):
-#        q.ChangeDutyCycle(i)
-#        time.sleep(0.02)
-#    for i in range(101):
-#        q.ChangeDutyCycle(100 - i)
-#        time.sleep(0.02)
-#
-#    GPIO.output(right_fr,GPIO.HIGH)
-#
-#    for i in range(101):
-#        q.ChangeDutyCycle(100 - i)
-#        time.sleep(0.02)
-#    for i in range(101):
-#        q.ChangeDutyCycle(i)
-#        time.sleep(0.02)
-#
-#    q.ChangeDutyCycle(0)
-#    GPIO.output(right_fr,GPIO.LOW)
-#
-#except KeyboardInterrupt:
-#    pass
 
 class Encoder:
 
@@ -152,6 +99,7 @@ class Encoder:
 
 class Motor:
     def __init__(self,pwm_pin,fr_pin,encoder_pin):
+        print("Motor")
 
         GPIO.setmode(GPIO.BCM)
 
@@ -173,40 +121,29 @@ class Motor:
         self._pwm.start(0)
         GPIO.output(self._fr_pin,GPIO.LOW)
 
-    @speed.setter
-    def speed(self,value):
+    def set_speed(self,value):
         if (value >= 0):
             GPIO.output(self._fr_pin,GPIO.LOW)
             self._pwm.ChangeDutyCycle(value)
         else:
             GPIO.output(self._fr_pin,GPIO.HIGH)
-            self._pwm.ChangeDutyCycle(100 - value)
+            self._pwm.ChangeDutyCycle(100 + value)
 
+LEFT_PWM = 2
+LEFT_FR = 3
+LEFT_ENCODER = 18
+
+RIGHT_PWM = 4
+RIGHT_FR = 14
+RIGHT_ENCODER = 15
 
 class MovementControl:
 
-    LEFT_PWM = 2
-    LEFT_FR = 3
-    RIGHT_PWM = 4
-    RIGHT_FR = 14
-
-
-    RIGHT_ENCODER = 15
-    LEFT_ENCODER = 18
     def __init__(self):
 
         self._left_wheel = Motor(LEFT_PWM,LEFT_FR,LEFT_ENCODER)
         self._right_wheel = Motor(RIGHT_PWM,RIGHT_FR,RIGHT_ENCODER)
 
-    def value(self,speed):
-        if type(speed) is tuple and len(speed) == 2:
-            self.left_wheel.speed = speed[0]
-
-
-
-
-
-
-
-
-
+    def set_speed(self,left_speed,right_speed):
+        self._left_wheel.set_speed(left_speed)
+        self._right_wheel.set_speed(right_speed)

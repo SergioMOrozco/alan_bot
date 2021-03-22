@@ -18,7 +18,7 @@ class StreamViewer(tk.LabelFrame):
         self.image_counter = 0
 
         self.is_streaming = False
-        self.camera = CameraControl()
+        #self.camera = CameraControl()
 
         self.label_file = None
 
