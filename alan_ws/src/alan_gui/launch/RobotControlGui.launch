@@ -1,7 +1,10 @@
 <launch>
-	<node pkg="rosserial_python" name="serial_node" type="serial_node.py">
+
+  <!-- needed for arduino. Keep just in case arduino needs to be reintroduced  --> 
+
+	<!-- <node pkg="rosserial_python" name="serial_node" type="serial_node.py">
 		<param name="port" value="/dev/ttyACM0"/>
-	</node>
+	</node> -->
 
 	<node pkg="alan_gui" name="robot_control_gui" type="robot_control_gui.py" output="screen"/>
 </launch>

@@ -1,6 +1,5 @@
 import tkinter as tk
 from alan_core.xbox_control import XboxController
-from alan_core.movement_control import Robot
 from widgets.controller_log import ControllerLog
 
 class XboxControlTab(tk.Frame):

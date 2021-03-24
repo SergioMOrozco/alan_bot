@@ -2,7 +2,7 @@
 import tkinter as tk
 from widgets.movement_controller import MovementController
 from widgets.stream_viewer import StreamViewer 
-from alan_core.movement_control import Robot
+from alan_core.robot import Robot
 import time
 import rospy
 

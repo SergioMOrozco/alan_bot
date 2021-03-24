@@ -1,5 +1,4 @@
 import tkinter as tk
-from alan_core.movement_control import Robot
 
 class ScreenControlTab(tk.Frame):
     def __init__(self,parent,robot,*args,**kwargs):
@@ -17,20 +16,20 @@ class ScreenControlTab(tk.Frame):
         ## create and bind buttons
         self.forward_button.grid(row=0,column=1)
         self.forward_button.bind('<ButtonPress-1>',self.click_forward)
-        self.forward_button.bind('<ButtonRelease-1>',self.button_released)
+        self.forward_button.bind('<ButtonRelease-1>',self.power_button_released)
 
 
         self.left_button.grid(row=1,column=0)
         self.left_button.bind('<ButtonPress-1>',self.click_left)
-        self.left_button.bind('<ButtonRelease-1>',self.button_released)
+        self.left_button.bind('<ButtonRelease-1>',self.steer_button_released)
 
         self.backward_button.grid(row=2,column=1)
         self.backward_button.bind('<ButtonPress-1>',self.click_backward)
-        self.backward_button.bind('<ButtonRelease-1>',self.button_released)
+        self.backward_button.bind('<ButtonRelease-1>',self.power_button_released)
 
         self.right_button.grid(row=1,column=2)
         self.right_button.bind('<ButtonPress-1>',self.click_right)
-        self.right_button.bind('<ButtonRelease-1>',self.button_released)
+        self.right_button.bind('<ButtonRelease-1>',self.steer_button_released)
 
     def click_forward(self,event):
         self._robot.apply_power(1.0)
@@ -44,6 +43,9 @@ class ScreenControlTab(tk.Frame):
     def click_right(self,event):
         self._robot.apply_steering_power(1.0)
 
-    def button_released(self,event):
+    def power_button_released(self,event):
         self._robot.apply_power(0)
+
+    def steer_button_released(self,event):
+        self._robot.apply_steering_power(0)
 

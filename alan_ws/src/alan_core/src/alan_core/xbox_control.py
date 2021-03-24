@@ -11,7 +11,6 @@ import rospy
 from std_msgs.msg import String
 from threading import Thread
 from fcntl import ioctl
-from alan_core.movement_control import Robot 
 
 class XboxController():
 
