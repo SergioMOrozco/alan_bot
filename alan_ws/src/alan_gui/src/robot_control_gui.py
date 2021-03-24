@@ -24,7 +24,7 @@ class RobotControl(tk.Frame):
         self.title_label.grid(row=0,column=1)
 
         # Option for user to view the pi stream
-        self.stream_viewer = StreamViewer(self,text="Stream")
+        self.stream_viewer = StreamViewer(self,self._robot,text="Stream")
         self.stream_viewer.grid(row=1,column=1)
 
         # Give robot time to boot up

@@ -3,14 +3,15 @@ import cv2
 import os
 import rospy
 from tkinter import filedialog
-from alan_core.camera_control import CameraControl 
 from PIL import Image,ImageTk
 from std_msgs.msg import Float32
 
 class StreamViewer(tk.LabelFrame):
-    def __init__(self,parent,*args,**kwargs):
+    def __init__(self,parent,robot,*args,**kwargs):
         tk.LabelFrame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
+
+        self.robot = robot
 
         self.right_wheel_sub = rospy.Subscriber('wheel_power_right',Float32,self.update_right_label)
         self.left_wheel_sub = rospy.Subscriber('wheel_power_left',Float32,self.update_left_label)
@@ -18,7 +19,6 @@ class StreamViewer(tk.LabelFrame):
         self.image_counter = 0
 
         self.is_streaming = False
-        #self.camera = CameraControl()
 
         self.label_file = None
 
@@ -80,9 +80,7 @@ class StreamViewer(tk.LabelFrame):
         # allow stream loop to begin
         self.is_streaming = True
 
-        # start camera only if it is not already started
-        if (self.camera.stopped):
-            self.camera.start()
+        self.robot.start_video_stream()
 
         if gather_data:
             self.label_file = open(self.data_path + '/labels.txt', 'w')
@@ -107,14 +105,11 @@ class StreamViewer(tk.LabelFrame):
                 return
 
             # Capture frame-by-frame
-            frame = self.camera.read()
-
-            # flip to correct rotation
-            frame = cv2.flip(frame,0)
-            frame = cv2.flip(frame,1)
+            frame = self.robot.get_video_capture()
 
             # display stream frame onto screen
             if display:
+                frame = cv2.resize(frame,(640,480))
                 frame = Image.fromarray(frame)
                 frame = ImageTk.PhotoImage(frame)
                 self.label.config(image=frame)
@@ -129,7 +124,7 @@ class StreamViewer(tk.LabelFrame):
             self.label.after(1,lambda:self.stream(display,gather_data))
 
         except:
-            self.camera.stop()
+            self.robot.stop_video_stream()
 
             if (not (self.label_file is None)):
                 self.label_file.close()

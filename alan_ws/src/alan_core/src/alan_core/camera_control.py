@@ -9,7 +9,7 @@ import time
 
 
 class CameraControl:
-    def __init__(self, resolution=(640, 480), framerate=90):
+    def __init__(self, resolution=(1024,720), framerate=60):
 
         ##initialize the camera and stream
         self.camera = PiCamera()
@@ -38,6 +38,8 @@ class CameraControl:
         for f in self.stream:
             # grab the frame from the stream and clear the stream in prep for next frame
             self.frame = f.array
+
+
             self.rawCapture.truncate(0)
 
             # if the thread indication variable is set, stop the thread

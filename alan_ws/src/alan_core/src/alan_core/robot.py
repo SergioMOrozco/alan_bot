@@ -1,9 +1,12 @@
 #! /home/sorozco/computer_vision/bin/python3
+import cv2
 from alan_core.movement_control import MovementControl
+from alan_core.camera_control import CameraControl
 
 class Robot:
     def __init__(self):
         self._movement_control = MovementControl()
+        self._camera = CameraControl()
 
         # power variables
         self._power = 0
@@ -54,3 +57,22 @@ class Robot:
             self._left_power = 0
 
         self._movement_control.set_speed(self._power + self._left_power, self._power + self._right_power)
+
+    def start_video_stream(self):
+
+        # start camera only if it is not already started
+        if (self._camera.stopped):
+            self._camera.start()
+
+    def stop_video_stream(self):
+        self._camera.stop()
+
+    def get_video_capture(self):
+
+        frame = self._camera.read()
+
+        # flip to correct rotation
+        frame = cv2.flip(frame,0)
+        frame = cv2.flip(frame,1)
+
+        return frame
