@@ -20,8 +20,8 @@ class Robot:
 
     def apply_steering_power(self, steering_power):
 
-        # max steering power is 0.4
-        steering_power = min(max(-0.4,steering_power),0.4)
+        # max steering power range is [-0.4,0.4]
+        steering_power = self.remap(steering_power,-1.0,1.0,-0.4,0.4)
 
         is_positive = self._power >= 0
 
@@ -57,6 +57,11 @@ class Robot:
             self._left_power = 0
 
         self._movement_control.set_speed(self._power + self._left_power, self._power + self._right_power)
+
+    def remap(self, old_value, old_min, old_max, new_min, new_max):
+        return (
+            ((old_value - old_min) * (new_max - new_min)) / (old_max - old_min)
+        ) + new_min
 
     def start_video_stream(self):
 
