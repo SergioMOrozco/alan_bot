@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from widgets.xbox_control_tab import XboxControlTab
 from widgets.screen_control_tab import ScreenControlTab
+from widgets.automated_control_tab import AutomatedControlTab
 
 class MovementController(tk.LabelFrame):
     def __init__(self,parent,robot,*args,**kwargs):
@@ -12,7 +13,10 @@ class MovementController(tk.LabelFrame):
         self.notebook = tk.ttk.Notebook(self)
         self.screen_control_tab = ScreenControlTab(self.notebook,robot)
         self.xbox_control_tab = XboxControlTab(self.notebook,robot)
+        self.automated_control_tab = AutomatedControlTab(self.notebook,robot)
+
         self.notebook.add(self.screen_control_tab,text="On Screen")
         self.notebook.add(self.xbox_control_tab,text="Xbox Control")
+        self.notebook.add(self.automated_control_tab, text="Automation")
 
         self.notebook.pack()

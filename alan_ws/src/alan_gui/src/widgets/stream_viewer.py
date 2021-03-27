@@ -51,6 +51,7 @@ class StreamViewer(tk.LabelFrame):
         self.data_gather_button = tk.Button(self,text="Gather Data", command=self.gather_data)
         self.data_gather_button.grid(row=2,column=2)
 
+
     def update_left_label(self,value):
         text = "%0.2f" % value.data
         self.left_wheel_value_label.configure(text=text)
