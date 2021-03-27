@@ -1,17 +1,16 @@
 import tkinter as tk
 from alan_core.xbox_control import XboxController
-from alan_core.robot_movement import RobotMovement
-from alan_core.widgets.controller_log import ControllerLog
+from widgets.controller_log import ControllerLog
 
 class XboxControlTab(tk.Frame):
-    def __init__(self,parent,*args,**kwargs):
+    def __init__(self,parent,robot,*args,**kwargs):
         tk.Frame.__init__(self,parent,*args,**kwargs)
         self.parent = parent
 
-        self.movement = RobotMovement()
+        self._robot = robot
 
         # create xbox controller 
-        self.xbox_controller = XboxController(self.movement)
+        self.xbox_controller = XboxController(self._robot)
 
         # button to connect controller
         self.connect_button= tk.Button(self, text="Connect Controlller")
