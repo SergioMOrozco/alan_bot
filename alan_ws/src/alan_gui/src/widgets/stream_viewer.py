@@ -116,7 +116,8 @@ class StreamViewer(tk.LabelFrame):
                 self.label.image =frame
 
             if gather_data:
-                self.label_file.write(self.left_wheel_value_label['text'] + ',' + self.right_wheel_value_label['text'] + '\n')
+                left_speed,right_speed = self.robot.get_power()
+                self.label_file.write(str(left_speed) + ',' + str(right_speed) + '\n')
                 cv2.imwrite(self.data_path + '/' + f'{self.image_counter}' + '.jpg',frame)
                 self.image_counter += 1
             
