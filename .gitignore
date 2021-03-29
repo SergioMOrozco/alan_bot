@@ -6,6 +6,7 @@ alan_ws/.catkin_workspace
 
 data_processing/road_data/
 model_creation/.ipynb_checkpoints/
+model_creation/model.tflite
 
 *.pyc
 !**/__pycache__/

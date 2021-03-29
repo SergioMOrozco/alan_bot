@@ -21,8 +21,8 @@ class ImageManager:
         features = np.load(os.path.join(directory, "features.npy"))
         labels = np.load(os.path.join(directory, "labels.npy"))
 
-        cv2.imshow("image", features[0])
-        print(labels[0])
+        cv2.imshow("image", features[500])
+        print(labels[500])
         cv2.waitKey(1000)
 
     def create_dataset(self, search_directory):
@@ -49,8 +49,8 @@ class ImageManager:
 
                 if label_file:
                     # show image to user
-                    cv2.imshow("image", clean)
-                    cv2.waitKey(30)
+                    # cv2.imshow("image", clean)
+                    # cv2.waitKey(30)
 
                     # input cleaned image into dataset
                     self.features.append(clean)
@@ -76,30 +76,31 @@ class ImageManager:
 
         # HSV provides more color contrast with yellow lines.
         # It was alot easier to isolate the yellow lines in HSV than in BGR
-        hsv = cv2.cvtColor(scaled, cv2.COLOR_BGR2HSV)
+        # hsv = cv2.cvtColor(scaled, cv2.COLOR_BGR2HSV)
 
         # hsv mask to get yellow from image in medium lighting
-        hsv_thresh = cv2.inRange(
-            hsv, np.array([2, 0, 94], np.uint8), np.array([24, 255, 185], np.uint8)
-        )
+        # hsv_thresh = cv2.inRange(
+        #    hsv, np.array([0, 0, 63], np.uint8), np.array([107, 243, 255], np.uint8)
+        # )
 
-        # gaussian blue reduces noise from image. Used to keep the most prominent edges from an image
-        hsv_blur = cv2.GaussianBlur(hsv_thresh, (13, 13), 0)
+        ## gaussian blue reduces noise from image. Used to keep the most prominent edges from an image
+        # hsv_blur = cv2.GaussianBlur(hsv_thresh, (13, 13), 0)
 
-        # edge detection
-        canny = cv2.Canny(hsv_blur, 246, 255)
+        ## edge detection
+        ## canny = cv2.Canny(hsv_blur, 246, 255)
+        # canny = cv2.Canny(hsv_blur, 0, 255)
 
-        region = ImageManager.region_of_interest(canny)
+        region = ImageManager.region_of_interest(scaled)
 
         # give single color channel. Needed for 2DConv
-        region = region.reshape(list(region.shape) + [1])
+        # region = region.reshape(list(region.shape) + [1])
 
         return region
 
     @staticmethod
     def region_of_interest(img):
 
-        height, width = img.shape
+        height, width, channels = img.shape
 
         vertices = np.array(
             [
@@ -119,7 +120,7 @@ class ImageManager:
         mask = np.zeros_like(img)
 
         # mask only works for binary images
-        match_mask_color = 255
+        match_mask_color = (255, 255, 255)
 
         # filly polygon with white given vertices
         cv2.fillPoly(mask, vertices, match_mask_color)
@@ -143,5 +144,6 @@ class ImageManager:
 
 if __name__ == "__main__":
     manager = ImageManager()
-    manager.start_menu()
+    # manager.start_menu()
+    manager.mini_test("/home/sorozco0612/dev/alan_bot/data_processing/road_data/")
     cv2.destroyAllWindows()
