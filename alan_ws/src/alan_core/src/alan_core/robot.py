@@ -14,7 +14,7 @@ class Robot:
         self._left_steer_power = 0
 
     def apply_power(self, power):
-        self._power = min(max(-1,power),1)
+        self._power = min(max(-0.6,power),0.6)
 
         self._movement_control.set_speed(self._power +self._left_steer_power,self._power + self._right_steer_power)
 

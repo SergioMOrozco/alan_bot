@@ -41,10 +41,10 @@ class AutomatedControlTab(tk.Frame):
             speed = self.classify_image(frame)
             self.robot._movement_control.set_speed(speed[0],speed[1])
             print(speed)
-            time.sleep(0.1)
+            #time.sleep(0.1)
 
     # reference https://blog.paperspace.com/tensorflow-lite-raspberry-pi/
-    def classify_image(self,image,top_k=1):
+    def classify_image(self,image):
             clean = self.clean_image(image)
 
             # get input tensor
@@ -60,14 +60,7 @@ class AutomatedControlTab(tk.Frame):
             output_details = self.interpreter.get_output_details()[0]
             output = np.squeeze(self.interpreter.get_tensor(output_details['index']))
 
-            # no ideal what is going on here. May not be needed
-            if (output_details['dtype'] == np.uint8):
-                scale,zero_point = output_details['quantization']
-                output = scale * (output - zero_point)
-
-            # no ideal what is going on here. May not be needed
-            ordered = np.argpartition(-output,top_k)
-            return [(i,output[i]) for i in ordered[:top_k]][0]
+            return output
 
     def clean_image(self,image):
 
