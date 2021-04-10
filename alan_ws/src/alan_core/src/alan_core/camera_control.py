@@ -1,6 +1,3 @@
-#! /home/sorozco/computer_vision/bin/python3
-
-## pi camera allows access to the RAspberry Pi camera module
 from threading import Thread
 import cv2
 import time

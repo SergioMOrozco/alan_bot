@@ -1,4 +1,3 @@
-#! /home/sorozco/computer_vision/bin/python3
 # Released by rdb under the Unlicense (unlicense.org)
 # Modified by Sergio Orozco for ROS compatibility
 # Based on information from:
