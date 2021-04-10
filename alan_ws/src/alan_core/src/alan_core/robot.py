@@ -1,4 +1,3 @@
-#! /home/sorozco/computer_vision/bin/python3
 import cv2
 from alan_core.movement_control import MovementControl
 from alan_core.camera_control import CameraControl

@@ -1,8 +1,6 @@
 #! /home/sorozco/computer_vision/bin/python3
 
 ## pi camera allows access to the RAspberry Pi camera module
-from picamera.array import PiRGBArray
-from picamera import PiCamera
 from threading import Thread
 import cv2
 import time
@@ -10,19 +8,8 @@ import time
 
 class CameraControl:
     def __init__(self, resolution=(1024,720), framerate=60):
+        pass
 
-        ##initialize the camera and stream
-        self.camera = PiCamera()
-        self.camera.resolution = resolution
-        self.camera.framerate = framerate
-        self.rawCapture = PiRGBArray(self.camera, size=resolution)
-        self.stream = self.camera.capture_continuous(
-            self.rawCapture, format="bgr", use_video_port=True
-        )
-
-        ## initialize the frame and variable use to indicate if thread should be stopped
-        self.frame = None
-        self.stopped = True
 
     def start(self):
         self.stopped = False

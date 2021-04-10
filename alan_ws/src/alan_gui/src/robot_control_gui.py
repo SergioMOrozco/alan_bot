@@ -1,7 +1,7 @@
-#! /home/sorozco/computer_vision/bin/python3
+#! /usr/bin/python3
 import tkinter as tk
 from widgets.movement_controller import MovementController
-from widgets.stream_viewer import StreamViewer 
+#from widgets.stream_viewer import StreamViewer 
 from alan_core.robot import Robot
 import time
 import rospy
@@ -24,8 +24,8 @@ class RobotControl(tk.Frame):
         self.title_label.grid(row=0,column=1)
 
         # Option for user to view the pi stream
-        self.stream_viewer = StreamViewer(self,self._robot,text="Stream")
-        self.stream_viewer.grid(row=1,column=1)
+        #self.stream_viewer = StreamViewer(self,self._robot,text="Stream")
+        #self.stream_viewer.grid(row=1,column=1)
 
         # Give robot time to boot up
         time.sleep(2.0)
