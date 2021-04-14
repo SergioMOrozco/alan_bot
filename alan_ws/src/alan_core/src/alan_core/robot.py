@@ -78,8 +78,4 @@ class Robot:
 
         frame = self._camera.read()
 
-        # flip to correct rotation
-        frame = cv2.flip(frame,0)
-        frame = cv2.flip(frame,1)
-
         return frame

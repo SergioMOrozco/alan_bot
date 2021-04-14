@@ -3,7 +3,7 @@ import cv2
 import os
 import rospy
 from tkinter import filedialog
-from PIL import Image,ImageTk
+from PIL import Image, ImageTk
 from std_msgs.msg import Float32
 
 class StreamViewer(tk.LabelFrame):
