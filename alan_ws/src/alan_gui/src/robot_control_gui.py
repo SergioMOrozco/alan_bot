@@ -1,9 +1,7 @@
 #! /usr/bin/python3
 import tkinter as tk
 from widgets.movement_controller import MovementController
-from widgets.stream_viewer import StreamViewer 
 from alan_core.robot import Robot
-from widgets.flask_stream import FlaskStream
 import time
 import rospy
 
@@ -15,21 +13,16 @@ class RobotControl(tk.Frame):
 
         self._robot = Robot()
 
-        self._flask_stream = FlaskStream(self._robot)
-        self._flask_stream.start()
-
-        # Notebook which allows the user to control the robot in multiple ways
-        self.movement_controller = MovementController(self,self._robot,text="Movement")
-        self.movement_controller.grid(row=0,column=0,rowspan=2)
-
         # Title of application
         self.title_label = tk.Label(self,text="Surge.IO")
         self.title_label.config(font=("Courier",44))
-        self.title_label.grid(row=0,column=1)
+        #self.title_label.grid(row=0,column=1)
+        self.title_label.pack()
 
-        # Option for user to view the pi stream
-        self.stream_viewer = StreamViewer(self,self._robot,text="Stream")
-        self.stream_viewer.grid(row=1,column=1)
+        # Notebook which allows the user to control the robot in multiple ways
+        self.movement_controller = MovementController(self,self._robot,text="Movement")
+        #self.movement_controller.grid(row=0,column=0,rowspan=2)
+        self.movement_controller.pack()
 
         # Give robot time to boot up
         time.sleep(2.0)
