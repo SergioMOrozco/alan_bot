@@ -48,6 +48,7 @@ class FlaskStream():
 
 
     def flask_thread(self):
+
         # start the Flask Web Application
         # While it can be run on any feasible IP, IP = 0.0.0.0 renders the web app on
         # the host machine's localhost and is discoverable by other machines on the same network 
@@ -55,24 +56,26 @@ class FlaskStream():
 
     def captureFrames(self):
         while True :
+
             ## break out of thread on stop
             if (self._stopped):
                 break
 
             with self.thread_lock:
                 self.video_frame = self.robot.get_video_capture()
-                #return_key, self.video_frame = cv2.imencode(".jpg", self.video_frame)
 
             cv2.waitKey(1)
 
     def displayFrames(self):
         while True:
+
             ## break out of thread on stop
             if (self._stopped):
                 break
 
             with self.thread_lock:
                 return_key, encoded = cv2.imencode(".jpg", self.video_frame)
+
             # Output image as a byte array
             yield(b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + 
                 bytearray(encoded) + b'\r\n')
