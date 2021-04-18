@@ -1,18 +1,24 @@
 import rospy
+import RPi.GPIO as GPIO
+
 from std_msgs.msg import Float32
 from alan_core.motor import Motor
 
-LEFT_PWM = 2
-LEFT_FR = 3
-#LEFT_ENCODER = 18
+ENABLE_PIN = 16
+RIGHT_PWM = 33
+RIGHT_FR = 35
 
-RIGHT_PWM = 4
-RIGHT_FR = 14
-#RIGHT_ENCODER = 15
+LEFT_PWM = 32
+LEFT_FR = 18
 
 class MovementControl:
 
     def __init__(self):
+        GPIO.setmode(GPIO.BOARD)
+
+        # enable motor driver
+        GPIO.setup(ENABLE_PIN,GPIO.OUT)
+        GPIO.output(ENABLE_PIN,GPIO.HIGH)
 
         # ros variables
         self.right_wheel_pub = rospy.Publisher('wheel_power_right'        ,Float32,queue_size=10)

@@ -1,4 +1,3 @@
-#! /home/sorozco/computer_vision/bin/python3
 import cv2
 from alan_core.movement_control import MovementControl
 from alan_core.camera_control import CameraControl
@@ -78,9 +77,5 @@ class Robot:
     def get_video_capture(self):
 
         frame = self._camera.read()
-
-        # flip to correct rotation
-        frame = cv2.flip(frame,0)
-        frame = cv2.flip(frame,1)
 
         return frame

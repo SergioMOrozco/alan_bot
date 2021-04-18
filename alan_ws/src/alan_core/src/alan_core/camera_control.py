@@ -1,8 +1,3 @@
-#! /home/sorozco/computer_vision/bin/python3
-
-## pi camera allows access to the RAspberry Pi camera module
-from picamera.array import PiRGBArray
-from picamera import PiCamera
 from threading import Thread
 import cv2
 import time
@@ -10,21 +5,27 @@ import time
 
 class CameraControl:
     def __init__(self, resolution=(1024,720), framerate=60):
-
-        ##initialize the camera and stream
-        self.camera = PiCamera()
-        self.camera.resolution = resolution
-        self.camera.framerate = framerate
-        self.rawCapture = PiRGBArray(self.camera, size=resolution)
-        self.stream = self.camera.capture_continuous(
-            self.rawCapture, format="bgr", use_video_port=True
-        )
-
-        ## initialize the frame and variable use to indicate if thread should be stopped
-        self.frame = None
         self.stopped = True
 
+        self._gstreamer_pipeline = (("nvarguscamerasrc ! " +
+        "video/x-raw(memory:NVMM), " +
+        "width={0}, height={1}, " +
+        "format=(string)NV12, framerate={2}/1 ! " +
+        "nvvidconv flip-method={3} ! " +
+        "video/x-raw, width={4}, height={5}, format=(string)BGRx ! " +
+        "videoconvert ! " +
+        "video/x-raw, format=(string)BGR ! appsink")
+        .format(
+            resolution[0],
+            resolution[1],
+            framerate,
+            0,
+            resolution[0],
+            resolution[1],
+        ))
+
     def start(self):
+        print("CAMERA STARTED")
         self.stopped = False
         # start the thread to read frames from the video stream
         Thread(target=self.update, args=()).start()
@@ -34,20 +35,17 @@ class CameraControl:
         return self
 
     def update(self):
+        print(self._gstreamer_pipeline,cv2.CAP_GSTREAMER)
+        cap = cv2.VideoCapture(self._gstreamer_pipeline,cv2.CAP_GSTREAMER)
+
         # keep looping infinitely until the thread stops
-        for f in self.stream:
-            # grab the frame from the stream and clear the stream in prep for next frame
-            self.frame = f.array
-
-
-            self.rawCapture.truncate(0)
+        while True:
+            ret,self.frame = cap.read()
 
             # if the thread indication variable is set, stop the thread
             # and resource camera resources
             if self.stopped:
-                self.stream.close()
-                self.rawCapture.close()
-                self.camera.close()
+                cap.release()
                 return
 
     def read(self):
