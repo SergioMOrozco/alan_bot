@@ -144,6 +144,6 @@ class ImageManager:
 
 if __name__ == "__main__":
     manager = ImageManager()
-    # manager.start_menu()
-    manager.mini_test("/home/sorozco0612/dev/alan_bot/data_processing/road_data/")
+    manager.start_menu()
+    # manager.mini_test("/home/sorozco0612/dev/alan_bot/data_processing/road_data/")
     cv2.destroyAllWindows()
