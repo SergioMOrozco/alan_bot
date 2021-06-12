@@ -1,8 +1,12 @@
+import pycuda.driver as cuda
+#import pycuda.autoinit # For automatic creation and cleanup of CUDA context
+import tensorrt as trt
 import tkinter as tk
+import os
 import numpy as np
 import time
-from cv2 import cv2
-from tflite_runtime.interpreter import Interpreter
+import cv2
+import time
 from threading import Thread
 
 class AutomatedControlTab(tk.Frame):
@@ -11,15 +15,17 @@ class AutomatedControlTab(tk.Frame):
         self.parent = parent
         self.robot = robot
 
-        self.interpreter = Interpreter("/home/sorozco/dev/alan_bot/models/model.tflite")
-
-        # allocates memory for the input and ouput tensors
-        self.interpreter.allocate_tensors()
-
         self.drive_button = tk.Button(self, text="Drive",command=self.start_drive)
         self.drive_button.pack()
 
+
         self.is_driving = False
+
+    def my_input_fn(self):
+        # Input for a single inference call, for a network that has two input tensors:
+        Inp1 = np.random.normal(size=(8, 16, 16, 3)).astype(np.float32)
+        inp2 = np.random.normal(size=(8, 16, 16, 3)).astype(np.float32)
+        yield (inp1, inp2)
 
     def start_drive(self):
         self._is_driving = True
@@ -30,88 +36,74 @@ class AutomatedControlTab(tk.Frame):
     def stop_drive(self):
         self._is_driving = False
         self.drive_button.configure(text="Drive",command=self.start_drive)
+        self.robot.apply_power(0)
+        self.robot.apply_steering_power(0)
 
     def driving(self):
+        #self.initialize_trt()
+        # grabbed here: https://stackoverflow.com/questions/60372729/get-logicerror-explicit-context-dependent-failed-invalid-device-context-no
+        cuda.init()
+        device = cuda.Device(0)  # enter your Gpu id here
+        ctx = device.make_context()
+
+        self.trt_logger = trt.Logger(trt.Logger.INFO)
+        self.runtime = trt.Runtime(self.trt_logger)
+        with open("/home/sorozco/engine.plan", "rb") as f:
+            self.engine = self.runtime.deserialize_cuda_engine(f.read())
+
+        self.context = self.engine.create_execution_context()
+
+        self.stream = cuda.Stream()
+
+        self.host_in = cuda.pagelocked_empty(trt.volume(self.engine.get_binding_shape(0)), dtype=np.float32)
+        self.host_out = cuda.pagelocked_empty(trt.volume(self.engine.get_binding_shape(1)), dtype=np.float32)
+        self.devide_in = cuda.mem_alloc(self.host_in.nbytes)
+        self.devide_out = cuda.mem_alloc(self.host_out.nbytes)
 
         while (True):
+            self.robot.apply_power(1.0)
             if not self._is_driving:
                 break
 
             frame = self.robot.get_video_capture()
             speed = self.classify_image(frame)
-            self.robot._movement_control.set_speed(speed[0],speed[1])
-            print(speed)
-            #time.sleep(0.1)
+            print(speed[0])
+            self.robot.apply_steering_power(speed[0],False)
+        ctx.pop()  # very important
 
-    # reference https://blog.paperspace.com/tensorflow-lite-raspberry-pi/
     def classify_image(self,image):
-            clean = self.clean_image(image)
+        clean = self.clean_image(image)
 
-            # get input tensor
-            tensor_index = self.interpreter.get_input_details()[0]['index']
-            input_tensor = self.interpreter.get_tensor(tensor_index)
+        # do i need this??
+        #image = image.transpose(2,0,1)
 
-            # set tensor equal to image
-            input_tensor[:,:] = clean
-            self.interpreter.set_tensor(tensor_index,input_tensor)
-
-            #invoke the self.interpreter. Essentially this runs the model.
-            self.interpreter.invoke()
-            output_details = self.interpreter.get_output_details()[0]
-            output = np.squeeze(self.interpreter.get_tensor(output_details['index']))
-
-            return output
+        bindings = [int(self.devide_in), int(self.devide_out)]
+        np.copyto(self.host_in, np.ravel(clean))
+        cuda.memcpy_htod_async(self.devide_in, self.host_in, self.stream)
+        self.context.execute_async(bindings=bindings, stream_handle=self.stream.handle)
+        cuda.memcpy_dtoh_async(self.host_out, self.devide_out, self.stream)
+        self.stream.synchronize()
+        return self.host_out
 
     def clean_image(self,image):
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+        image = cv2.GaussianBlur(image, (3, 3), 0)
+        scaled = cv2.resize(image, (200, 66))
+        #region = self.region_of_interest(scaled)
+        scaled_pixels = self.scale_pixels(scaled)
 
-        scaled = self.scale_image(image)
-        region = self.region_of_interest(scaled)
+        return scaled_pixels
 
-        return region
+    def scale_pixels(self,image):
+        normalized = self.normalize_pixels(image)
+        centered = self.center_pixels(normalized)
+        return centered
 
-    def scale_image(self,image, scale=60):
+    def normalize_pixels(self,image):
+        pixels = image.astype("float32")
+        pixels /= 255.0
+        return pixels
 
-        if scale == 100:
-            return image
-
-        # calculate the 50 percent of original dimensions
-        width = int(image.shape[1] * scale / 100)
-        height = int(image.shape[0] * scale / 100)
-
-        # resize image
-        return cv2.resize(image, (width, height))
-
-    def region_of_interest(self,img):
-
-        height, width, channels = img.shape
-
-        vertices = np.array(
-            [
-                [
-                    (0, height),
-                    (0, height * 3 / 4),
-                    (width / 5, height / 3),
-                    (width * 4 / 5, height / 3),
-                    (width, height * 3 / 4),
-                    (width, height),
-                ]
-            ],
-            np.int32,
-        )
-
-        # create empty mas
-        mask = np.zeros_like(img)
-
-        # mask only works for binary images
-        match_mask_color = (255, 255, 255)
-
-        # filly polygon with white given vertices
-        cv2.fillPoly(mask, vertices, match_mask_color)
-
-        # only take pixels where both the mask and image are white
-        return cv2.bitwise_and(img, mask)
-
-        
-            
-
-
+    def center_pixels(self,image):
+        pixels = image - image.mean()
+        return pixels

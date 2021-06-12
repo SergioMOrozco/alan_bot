@@ -9,7 +9,7 @@ class Motor:
         self._control_effort = 0
         self._set_point = 0
 
-        GPIO.setmode(GPIO.BCM)
+        GPIO.setmode(GPIO.BOARD)
 
         self._fr_pin = fr_pin
         self._pwm_pin = pwm_pin

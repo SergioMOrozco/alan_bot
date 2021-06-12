@@ -1,4 +1,3 @@
-#! /home/sorozco/computer_vision/bin/python3
 # Released by rdb under the Unlicense (unlicense.org)
 # Modified by Sergio Orozco for ROS compatibility
 # Based on information from:
@@ -8,7 +7,7 @@ import os, struct, array
 import time
 import rospy
 
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 from threading import Thread
 from fcntl import ioctl
 
@@ -89,6 +88,7 @@ class XboxController():
     def __init__(self,robot):
 
         self.log_pub = rospy.Publisher('controller_logging',String,queue_size=10)
+        self.stop_data_gather_pub = rospy.Publisher('stop_data_gather',Empty,queue_size=10)
 
         self._power = 0
         self._steering_power = 0
@@ -186,6 +186,7 @@ class XboxController():
             if value:
                 log = ("Shutting_Down_Controller")
                 self.log_pub.publish(log)
+                self.stop_data_gather_pub.publish()
 
                 self.shutdown()
 
