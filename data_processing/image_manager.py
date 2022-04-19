@@ -3,41 +3,58 @@ import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 import h5py
-
-filename = "data.h5"
+import H5pyHelper
+from datetime import datetime
 
 
 class ImageManager:
     def __init__(self):
+        self.set_default()
+
+    def set_default(self):
         self.features = []
         self.labels = []
         self.i = 0
-        self.batches = 500
+        self.batches = 5000
 
     def start_menu(self):
-
-        self.directory = input(
-            "Please input a directory containg .jpg files that you would like cleaned and made into a dataset: "
-        )
-
-        self.f = None
+        self.directory = "/home/sorozco0612/dev/alan_bot/data_processing/road_data/"
 
         self.create_dataset(self.directory)
 
         if not (self.features == []) and not (self.labels == []):
-            self.batches = len(self.features)
-            self.append_to_dataset()
+            x_train, x_test, y_train, y_test = train_test_split(
+                np.array(self.features), np.array(self.labels)
+            )
+            # self.append_to_dataset(temp_filename)
+            H5pyHelper.append_to_dataset(
+                os.path.join(self.directory, "data.h5"),
+                x_train,
+                "x_train",
+            )
+            H5pyHelper.append_to_dataset(
+                os.path.join(self.directory, "data.h5"),
+                y_train,
+                "y_train",
+            )
+            H5pyHelper.append_to_dataset(
+                os.path.join(self.directory, "data.h5"),
+                x_test,
+                "x_test",
+            )
+            H5pyHelper.append_to_dataset(
+                os.path.join(self.directory, "data.h5"),
+                y_test,
+                "y_test",
+            )
 
-        # self.save_dataset(directory)
-        # self.mini_test(directory)
-
-    def mini_test(self, directory):
-        features = np.load(os.path.join(directory, "features.npy"))
-        labels = np.load(os.path.join(directory, "labels.npy"))
-
-        cv2.imshow("image", features[0])
-        print(labels[0])
-        cv2.waitKey(1000)
+        seed = datetime.now()
+        H5pyHelper.shuffle_dataset(
+            os.path.join(self.directory, "data.h5"), "x_train", seed
+        )
+        H5pyHelper.shuffle_dataset(
+            os.path.join(self.directory, "data.h5"), "y_train", seed
+        )
 
     def create_dataset(self, search_directory):
         label_file = None
@@ -54,6 +71,7 @@ class ImageManager:
 
             # recursively find .jpg files in sub directories
             if os.path.isdir(path):
+                print(path)
                 self.create_dataset(path + "/")
 
             elif component.endswith(".jpg"):
@@ -63,12 +81,33 @@ class ImageManager:
                 if label_file:
 
                     if self.i == self.batches:
+                        x_train, x_test, y_train, y_test = train_test_split(
+                            np.array(self.features), np.array(self.labels)
+                        )
+                        # self.append_to_dataset(temp_filename)
+                        H5pyHelper.append_to_dataset(
+                            os.path.join(self.directory, "data.h5"),
+                            x_train,
+                            "x_train",
+                        )
+                        H5pyHelper.append_to_dataset(
+                            os.path.join(self.directory, "data.h5"),
+                            y_train,
+                            "y_train",
+                        )
+                        H5pyHelper.append_to_dataset(
+                            os.path.join(self.directory, "data.h5"),
+                            x_test,
+                            "x_test",
+                        )
+                        H5pyHelper.append_to_dataset(
+                            os.path.join(self.directory, "data.h5"),
+                            y_test,
+                            "y_test",
+                        )
                         self.i = 0
-                        self.append_to_dataset()
-
-                    # show image to user
-                    # cv2.imshow("image", clean)
-                    # cv2.waitKey(30)
+                        self.features = []
+                        self.labels = []
 
                     # input cleaned image into dataset
                     self.features.append(clean)
@@ -76,97 +115,22 @@ class ImageManager:
                     # get label from file
                     label = labels[int(component.strip(".jpg"))]
                     label = label.strip("\n")
-                    label = label.split(",")
-                    label = [float(item) for item in label]
+                    label = float(label)
 
                     self.i += 1
 
                     # store label into dataset
-                    self.labels.append([label[0], label[1]])
-
-    def append_to_dataset(self):
-        x_train, x_test, y_train, y_test = train_test_split(
-            np.array(self.features), np.array(self.labels)
-        )
-
-        print("Batch: ", self.batches)
-        if self.f is None:
-            self.f = h5py.File(os.path.join(self.directory, filename), "w")
-            train_x_data = self.f.create_dataset(
-                "x_train",
-                data=x_train,
-                compression="gzip",
-                chunks=True,
-                maxshape=(None, 432, 614, 3),
-            )
-            train_y_data = self.f.create_dataset(
-                "y_train",
-                data=y_train,
-                compression="gzip",
-                chunks=True,
-                maxshape=(None, 2),
-            )
-            test_x_data = self.f.create_dataset(
-                "x_test",
-                data=x_test,
-                compression="gzip",
-                chunks=True,
-                maxshape=(None, 432, 614, 3),
-            )
-            test_y_data = self.f.create_dataset(
-                "y_test",
-                data=y_test,
-                compression="gzip",
-                chunks=True,
-                maxshape=(None, 2),
-            )
-            print("'x_train' chunk has shape:{}".format(self.f["x_train"].shape))
-            print("'y_train' chunk has shape:{}".format(self.f["y_train"].shape))
-            print("'x_test' chunk has shape:{}".format(self.f["x_test"].shape))
-            print("'y_test' chunk has shape:{}".format(self.f["y_test"].shape))
-            print("====================")
-            self.f.close()
-
-        else:
-            hf = h5py.File(os.path.join(self.directory, filename), "a")
-
-            hf["x_train"].resize(hf["x_train"].shape[0] + x_train.shape[0], axis=0)
-            hf["x_train"][-x_train.shape[0] :] = x_train
-
-            hf["y_train"].resize(hf["y_train"].shape[0] + y_train.shape[0], axis=0)
-            hf["y_train"][-y_train.shape[0] :] = y_train
-
-            hf["x_test"].resize(hf["x_test"].shape[0] + x_test.shape[0], axis=0)
-            hf["x_test"][-x_test.shape[0] :] = x_test
-
-            hf["y_test"].resize(hf["y_test"].shape[0] + y_test.shape[0], axis=0)
-            hf["y_test"][-y_test.shape[0] :] = y_test
-
-            print("'x_train' chunk has shape:{}".format(hf["x_train"].shape))
-            print("'y_train' chunk has shape:{}".format(hf["y_train"].shape))
-            print("'x_test' chunk has shape:{}".format(hf["x_test"].shape))
-            print("'y_test' chunk has shape:{}".format(hf["y_test"].shape))
-            print("====================")
-
-            hf.close()
-
-        self.features = []
-        self.labels = []
-
-    def save_dataset(self, directory):
-        x_train, x_test, y_train, y_test = train_test_split(
-            np.array(self.features), np.array(self.labels)
-        )
-        np.save(os.path.join(directory, "train_features"), x_train)
-        np.save(os.path.join(directory, "train_labels"), y_train)
-        np.save(os.path.join(directory, "test_features"), x_test)
-        np.save(os.path.join(directory, "test_labels"), y_test)
+                    self.labels.append(label)
 
     @staticmethod
     def clean_image(image_path):
         image = cv2.imread(image_path)
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+        image = cv2.GaussianBlur(image, (3, 3), 0)
+        scaled = cv2.resize(image, (200, 66))
 
-        scaled = ImageManager.scale_image(image)
+        # scaled = ImageManager.scale_image(image)
+        scaled_pixels = ImageManager.scale_pixels(scaled)
 
         # HSV provides more color contrast with yellow lines.
         # It was alot easier to isolate the yellow lines in HSV than in BGR
@@ -189,7 +153,7 @@ class ImageManager:
         # give single color channel. Needed for 2DConv
         # region = region.reshape(list(region.shape) + [1])
 
-        return scaled
+        return scaled_pixels
 
     @staticmethod
     def region_of_interest(img):
@@ -235,9 +199,24 @@ class ImageManager:
         # resize image
         return cv2.resize(image, (width, height))
 
+    @staticmethod
+    def scale_pixels(image):
+        normalized = ImageManager.normalize_pixels(image)
+        centered = ImageManager.center_pixels(normalized)
+        return centered
+
+    @staticmethod
+    def normalize_pixels(image):
+        pixels = image.astype("float32")
+        pixels /= 255.0
+        return pixels
+
+    @staticmethod
+    def center_pixels(image):
+        pixels = image - image.mean()
+        return pixels
+
 
 if __name__ == "__main__":
     manager = ImageManager()
     manager.start_menu()
-    # manager.mini_test("/home/sorozco0612/dev/alan_bot/data_processing/road_data/")
-    cv2.destroyAllWindows()
